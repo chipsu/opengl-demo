@@ -2,6 +2,7 @@
 #include "Scene.h"
 #include "Shader.h"
 #include "Input.h"
+#include "UI.h"
 
 Input* Input::sInstance = nullptr;
 
@@ -58,6 +59,8 @@ int main(const int argc, const char **argv) {
 	glfwGetFramebufferSize(window, &windowWidth, &windowHeight);
 	glViewport(0, 0, windowWidth, windowHeight);
 
+	auto ui = std::make_shared<UI>(window);
+
 	auto program = CreateShaderProgram();
 	glUseProgram(program->mID);
 
@@ -67,19 +70,10 @@ int main(const int argc, const char **argv) {
 	const GLuint uniformView = glGetUniformLocation(program->mID, "uView");
 	const GLuint uniformModel = glGetUniformLocation(program->mID, "uModel");
 	const GLuint uniformBones = glGetUniformLocation(program->mID, "uBones");
-
-	/*layout(location = 0) in vec3 inPosition;
-	layout(location = 1) in vec3 inNormal;
-	layout(location = 2) in vec3 inColor;
-	layout(location = 3) in vec4 inBoneWeights;
-	layout(location = 4) in uvec4 inBoneIndices;*/
-	/*const GLuint inPosition = glGetAttribLocation(program->mID, "inPosition");
-	const GLuint inNormal = glGetAttribLocation(program->mID, "inNormal");
-	const GLuint inColor = glGetAttribLocation(program->mID, "inColor");
-	const GLuint inBoneWeights = glGetAttribLocation(program->mID, "inBoneWeights");
-	const GLuint inBoneIndices = glGetAttribLocation(program->mID, "inBoneIndices");*/
 	
 	float timer = GetTime();
+
+	auto selectedModel = scene->mEntities[0]->mModel;
 
 	while (!glfwWindowShouldClose(window)) {
 		float now = GetTime();
@@ -97,6 +91,20 @@ int main(const int argc, const char **argv) {
 		}
 
 		scene->Update(now, deltaTime);
+
+		ui->NewFrame();
+
+		if (selectedModel && selectedModel->mAnimationController) {
+			const auto ac = selectedModel->mAnimationController;
+			ImGui::Begin(ac->GetAnimationEnabled() ? ac->GetAnimation()->mName.c_str() : "Animations");
+
+			for (const auto& anim : ac->mAnimations) {
+				ImGui::Text("Animation: %s, %f", anim->mName.c_str(), anim->mDuration);
+			}
+
+			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+			ImGui::End();
+		}
 
 		glm::mat4 modl = glm::rotate(glm::identity<glm::mat4>(), scene->mCameraRotation * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 		glm::mat4 view = glm::lookAt(glm::vec3(scene->mCameraDistance), scene->mCameraCenter, glm::vec3(0.0f, 0.0f, 1.0f));
@@ -119,6 +127,8 @@ int main(const int argc, const char **argv) {
 				glDrawElements(GL_TRIANGLES, mesh->mIndices.size(), GL_UNSIGNED_INT, 0);
 			}
 		}
+
+		ui->Render();
 
 		timer = now;
 	}
