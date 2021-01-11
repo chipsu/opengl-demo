@@ -120,6 +120,39 @@ struct AnimationController {
 		//MapBone("___NULL___", glm::identity<glm::mat4>());
 	}
 
+	size_t GetAnimationIndex(const std::string& name) const {
+		for (size_t i = 0; i < mAnimations.size(); ++i) {
+			if (mAnimations[i]->mName == name) {
+				return i;
+			}
+		}
+		return -1;
+	}
+
+	/*
+	Hmm, idk how this works
+	move this to own controller maybe. some sequencer thing
+		animation bone priorities:
+		- walking + attack -> legs walking, arms attacking
+		- walking + jump -> jump prio
+		ik..
+
+	*/
+	float mBlendInDuration = 0.5f;
+	float mBlendOut = 0.5f;
+	std::map<size_t, float> mBlendMap;
+
+	void BlendAnimation(const size_t index, const float weight) {
+		assert(index != -1);
+		mBlendMap[index] = weight;
+	}
+	/*void BlendAnimation(const size_t index, const float weight, const size_t iterations) {
+	}
+	void BlendAnimation(const size_t index, const float weight, const float duration) {
+	}
+	void BlendAnimation(const size_t index, const float weight, const float start, const float end) {
+	}*/
+
 	void SetAnimationIndex(size_t animationIndex) {
 		mAnimationIndex = animationIndex;
 	}
@@ -140,9 +173,22 @@ struct AnimationController {
 		if (!GetAnimationEnabled()) {
 			return;
 		}
-		const auto& animation = mAnimations[mAnimationIndex];
-		const auto animationTime = animation->GetAnimationTime(absoluteTime);
-		ReadNodeHierarchy(animation, animationTime, pNode, mGlobalInverseTransform);
+		ReadNodeHierarchy(mAnimationIndex, absoluteTime, pNode);
+	}
+
+	std::vector<glm::mat4> mBlendedTransforms;
+
+	void UpdateBlended(float absoluteTime, const aiNode* pNode) {
+		mBlendedTransforms.resize(mFinalTransforms.size()); // FIXME
+		std::fill(mBlendedTransforms.begin(), mBlendedTransforms.end(), glm::zero<glm::mat4>());
+
+		for (const auto& it : mBlendMap) {
+			const float weight = it.second;
+			ReadNodeHierarchy(it.first, absoluteTime, pNode);
+			for (size_t x = 0; x < mFinalTransforms.size(); ++x) {
+				mBlendedTransforms[x] += mFinalTransforms[x] * weight;
+			}
+		}
 	}
 
 	uint32_t MapBone(const std::string& name, const glm::mat4& boneOffset) {
@@ -157,6 +203,12 @@ struct AnimationController {
 		mBoneOffsets[id] = boneOffset;
 		std::cout << "Bone " << name << " mapped to " << id << std::endl;
 		return id;
+	}
+
+	void ReadNodeHierarchy(size_t index, float absoluteTime, const aiNode* pNode) {
+		const auto& animation = mAnimations[index];
+		const auto animationTime = animation->GetAnimationTime(absoluteTime);
+		ReadNodeHierarchy(animation, animationTime, pNode, mGlobalInverseTransform);
 	}
 
 	void ReadNodeHierarchy(Animation_ animation, const float time, const aiNode* pNode, const glm::mat4 parentTransform) {

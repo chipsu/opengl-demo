@@ -11,7 +11,11 @@ Scene_ CreateScene() {
 	auto model = std::make_shared<Model>();
 	model->Load("witch.fbx");
 	if (model->mAnimationController && model->mAnimationController->GetAnimationCount()) {
-		model->mAnimationController->SetAnimationIndex(rand() % model->mAnimationController->GetAnimationCount());
+		//model->mAnimationController->SetAnimationIndex(rand() % model->mAnimationController->GetAnimationCount());
+		const auto walk = model->mAnimationController->GetAnimationIndex("CharacterArmature|Walk");
+		const auto jump = model->mAnimationController->GetAnimationIndex("CharacterArmature|Punch");
+		model->mAnimationController->BlendAnimation(walk, 1.0f);
+		model->mAnimationController->BlendAnimation(jump, 1.0f);
 	}
 	scene->mEntities.push_back(std::make_shared<Entity>(model));
 	scene->mCameraCenter = scene->mEntities[0]->mModel->mAABB.mCenter;
@@ -72,6 +76,7 @@ int main(const int argc, const char **argv) {
 	const GLuint uniformBones = glGetUniformLocation(program->mID, "uBones");
 	
 	float timer = GetTime();
+	bool useBlender = false;
 
 	auto selectedModel = scene->mEntities[0]->mModel;
 
@@ -91,15 +96,23 @@ int main(const int argc, const char **argv) {
 		}
 
 		scene->Update(now, deltaTime);
+		selectedModel->mAnimationController->UpdateBlended(now, selectedModel->mTempScene->mRootNode);
 
 		ui->NewFrame();
+
+		//ImGui::ShowDemoWindow();
 
 		if (selectedModel && selectedModel->mAnimationController) {
 			const auto ac = selectedModel->mAnimationController;
 			ImGui::Begin(ac->GetAnimationEnabled() ? ac->GetAnimation()->mName.c_str() : "Animations");
 
+			ImGui::Checkbox("Blend", &useBlender);
+
 			for (const auto& anim : ac->mAnimations) {
 				ImGui::Text("Animation: %s, %f", anim->mName.c_str(), anim->mDuration);
+
+				float animWeight = 0.5f;
+				ImGui::SliderFloat("W", &animWeight, 0.0f, 1.0f);
 			}
 
 			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
@@ -118,7 +131,7 @@ int main(const int argc, const char **argv) {
 			const auto& model = entity->mModel;
 			if (!model) continue;
 			if (model->mAnimationController) {
-				const auto& bones = model->mAnimationController->mFinalTransforms;
+				const auto& bones = useBlender ? model->mAnimationController->mBlendedTransforms : model->mAnimationController->mFinalTransforms;
 				glUniformMatrix4fv(uniformBones, bones.size(), GL_FALSE, (GLfloat*)&bones[0]);
 			}
 			for (auto& mesh : model->mMeshes) {
