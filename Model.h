@@ -9,10 +9,9 @@ struct Model {
 	std::vector<Mesh_> mMeshes;
 	AnimationController_ mAnimationController;
 	AABB mAABB;
-	const aiScene* mTempScene = nullptr;
 	void Update(float absoluteTime, float deltaTime) {
 		if (mAnimationController) {
-			mAnimationController->Update(absoluteTime, mTempScene->mRootNode);
+			mAnimationController->Update(absoluteTime);
 		}
 	}
 	void Load(const std::string& fileName);
