@@ -11,11 +11,7 @@ Scene_ CreateScene() {
 	auto model = std::make_shared<Model>();
 	model->Load("witch.fbx");
 	if (model->mAnimationController && model->mAnimationController->GetAnimationCount()) {
-		//model->mAnimationController->SetAnimationIndex(rand() % model->mAnimationController->GetAnimationCount());
-		const auto walk = model->mAnimationController->GetAnimationIndex("CharacterArmature|Walk");
-		const auto jump = model->mAnimationController->GetAnimationIndex("CharacterArmature|Punch");
-		model->mAnimationController->BlendAnimation(walk, 1.0f);
-		model->mAnimationController->BlendAnimation(jump, 1.0f);
+		model->mAnimationController->SetAnimationIndex(rand() % model->mAnimationController->GetAnimationCount());
 	}
 	scene->mEntities.push_back(std::make_shared<Entity>(model));
 	scene->mCameraCenter = scene->mEntities[0]->mModel->mAABB.mCenter;
@@ -42,7 +38,7 @@ int main(const int argc, const char **argv) {
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 
-	auto window = glfwCreateWindow(640, 480, "OpenGL Animation Demo", NULL, NULL);
+	auto window = glfwCreateWindow(1280, 720, "OpenGL Animation Demo", NULL, NULL);
 	if (!window) {
 		std::cerr << "glfwCreateWindow failed" << std::endl;
 		glfwTerminate();
@@ -77,8 +73,11 @@ int main(const int argc, const char **argv) {
 	
 	float timer = GetTime();
 	bool useBlender = false;
+	bool animDetails = false;
+	bool meshDetails = false;
 
 	auto selectedModel = scene->mEntities[0]->mModel;
+	std::vector<float> selectedWeights;
 
 	while (!glfwWindowShouldClose(window)) {
 		float now = GetTime();
@@ -96,23 +95,55 @@ int main(const int argc, const char **argv) {
 		}
 
 		scene->Update(now, deltaTime);
-		selectedModel->mAnimationController->UpdateBlended(now);
 
 		ui->NewFrame();
 
 		//ImGui::ShowDemoWindow();
 
+		if (selectedModel) {
+			ImGui::Checkbox("Model info", &meshDetails);
+
+			if (meshDetails) {
+				for (const auto& mesh : selectedModel->mMeshes) {
+					ImGui::Text("Mesh: h=%d, v=%d, i=%d, c=%s, s=%s",
+						mesh->mHidden,
+						mesh->mVertices.size(),
+						mesh->mIndices.size(),
+						glm::to_string(mesh->mAABB.mCenter).c_str(),
+						glm::to_string(mesh->mAABB.mHalfSize).c_str()
+					);
+				}
+			}
+		}
+
 		if (selectedModel && selectedModel->mAnimationController) {
 			const auto ac = selectedModel->mAnimationController;
 			ImGui::Begin(ac->GetAnimationEnabled() ? ac->GetAnimation()->mName.c_str() : "Animations");
 
+			ImGui::Checkbox("Animation info", &animDetails);
+			if (animDetails) {
+				for (const auto& anim : ac->mAnimations) {
+					ImGui::Text("Animation: %s, %f", anim->mName.c_str(), anim->mDuration);
+				}
+			}
+
 			ImGui::Checkbox("Blend", &useBlender);
 
-			for (const auto& anim : ac->mAnimations) {
-				ImGui::Text("Animation: %s, %f", anim->mName.c_str(), anim->mDuration);
+			if (useBlender) {
+				ac->UpdateBlended(now); // FIXME
+				// FIXME
+				if (selectedWeights.size() != ac->GetAnimationCount()) {
+					selectedWeights.resize(ac->GetAnimationCount());
+					std::fill(selectedWeights.begin(), selectedWeights.end(), 0);
+					selectedWeights[0] = 1.0f;
+				}
 
-				float animWeight = 0.5f;
-				ImGui::SliderFloat("W", &animWeight, 0.0f, 1.0f);
+				size_t animIndex = 0;
+				for (const auto& anim : ac->mAnimations) {
+					ImGui::SliderFloat(anim->mName.c_str(), &selectedWeights[animIndex], 0.0f, 1.0f);
+					ac->BlendAnimation(animIndex, selectedWeights[animIndex]);
+					animIndex++;
+				}
 			}
 
 			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);

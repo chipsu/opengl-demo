@@ -198,6 +198,7 @@ struct AnimationController {
 
 		for (const auto& it : mBlendMap) {
 			const float weight = it.second;
+			if (weight < 0.001f) continue;
 			ReadNodeHierarchy(it.first, absoluteTime);
 			for (size_t x = 0; x < mFinalTransforms.size(); ++x) {
 				mBlendedTransforms[x] += mFinalTransforms[x] * weight;
