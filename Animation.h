@@ -128,7 +128,7 @@ struct AnimationController {
 	std::vector<glm::mat4> mBoneOffsets;
 	std::vector<glm::mat4> mFinalTransforms;
 	glm::mat4 mGlobalInverseTransform;
-	AnimationNode_ mRootNode;
+	AnimationNode_ mRootNode; // FIXME: Move to Animation
 
 	AnimationController() {
 		//MapBone("___NULL___", glm::identity<glm::mat4>());

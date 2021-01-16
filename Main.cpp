@@ -11,7 +11,7 @@ Scene_ CreateScene() {
 	auto model = std::make_shared<Model>();
 	model->Load("witch.fbx");
 	if (model->mAnimationController && model->mAnimationController->GetAnimationCount()) {
-		model->mAnimationController->SetAnimationIndex(rand() % model->mAnimationController->GetAnimationCount());
+		model->mAnimationController->SetAnimationIndex(0);
 	}
 	scene->mEntities.push_back(std::make_shared<Entity>(model));
 	scene->mCameraCenter = scene->mEntities[0]->mModel->mAABB.mCenter;
@@ -140,7 +140,7 @@ int main(const int argc, const char **argv) {
 
 				size_t animIndex = 0;
 				for (const auto& anim : ac->mAnimations) {
-					ImGui::SliderFloat(anim->mName.c_str(), &selectedWeights[animIndex], 0.0f, 1.0f);
+					ImGui::SliderFloat(("#" + std::to_string(animIndex) + " " + anim->mName).c_str(), &selectedWeights[animIndex], 0.0f, 1.0f);
 					ac->BlendAnimation(animIndex, selectedWeights[animIndex]);
 					animIndex++;
 				}

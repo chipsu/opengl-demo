@@ -25,4 +25,8 @@ void main() {
     //gl_Position = uProj * uView * uModel * vec4(inPosition, 1.0);
 
     outColor = inColor;
+
+    //outColor = vec3(inBoneWeights[0], inBoneWeights[1], inBoneWeights[2]);
+    //outColor = vec3(inBoneIndices[0], inBoneIndices[1], inBoneIndices[2]);
+    outColor = inNormal;
 }
