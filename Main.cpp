@@ -96,7 +96,7 @@ int main(const int argc, const char **argv) {
 		}
 
 		scene->Update(now, deltaTime);
-		selectedModel->mAnimationController->UpdateBlended(now, selectedModel->mTempScene->mRootNode);
+		selectedModel->mAnimationController->UpdateBlended(now);
 
 		ui->NewFrame();
 

@@ -75,6 +75,19 @@ struct AnimationTrack {
 };
 typedef std::shared_ptr<AnimationTrack> AnimationTrack_;
 
+struct AnimationNode {
+	typedef std::shared_ptr<AnimationNode> AnimationNode_;
+	std::string mName;
+	std::vector<AnimationNode_> mChildren;
+	AnimationNode_ mParent;
+	glm::mat4 mTransform;
+
+	AnimationNode(const std::string& name, AnimationNode_ parent, const glm::mat4& transform) : mName(name), mParent(parent), mTransform(transform) {
+	}
+
+};
+typedef AnimationNode::AnimationNode_ AnimationNode_;
+
 struct Animation {
 	std::string mName;
 	std::vector<AnimationTrack_> mAnimationTracks;
@@ -91,10 +104,10 @@ struct Animation {
 		return nullptr;
 	}
 
-	glm::mat4 GetNodeTransform(const float time, const aiNode* pNode, const std::string& name) const {
-		const auto& track = GetAnimationTrack(name);
+	glm::mat4 GetNodeTransform(const float time, const AnimationNode_ node) const {
+		const auto& track = GetAnimationTrack(node->mName);
 		if (nullptr == track) {
-			return make_mat4(pNode->mTransformation);
+			return node->mTransform;
 		}
 		return track->InterpolateTransform(time);
 	}
@@ -115,6 +128,7 @@ struct AnimationController {
 	std::vector<glm::mat4> mBoneOffsets;
 	std::vector<glm::mat4> mFinalTransforms;
 	glm::mat4 mGlobalInverseTransform;
+	AnimationNode_ mRootNode;
 
 	AnimationController() {
 		//MapBone("___NULL___", glm::identity<glm::mat4>());
@@ -169,22 +183,22 @@ struct AnimationController {
 		return mAnimationIndex < mAnimations.size() ? mAnimations[mAnimationIndex] : nullptr;
 	}
 
-	void Update(float absoluteTime, const aiNode* pNode) {
+	void Update(float absoluteTime) {
 		if (!GetAnimationEnabled()) {
 			return;
 		}
-		ReadNodeHierarchy(mAnimationIndex, absoluteTime, pNode);
+		ReadNodeHierarchy(mAnimationIndex, absoluteTime);
 	}
 
 	std::vector<glm::mat4> mBlendedTransforms;
 
-	void UpdateBlended(float absoluteTime, const aiNode* pNode) {
+	void UpdateBlended(float absoluteTime) {
 		mBlendedTransforms.resize(mFinalTransforms.size()); // FIXME
 		std::fill(mBlendedTransforms.begin(), mBlendedTransforms.end(), glm::zero<glm::mat4>());
 
 		for (const auto& it : mBlendMap) {
 			const float weight = it.second;
-			ReadNodeHierarchy(it.first, absoluteTime, pNode);
+			ReadNodeHierarchy(it.first, absoluteTime);
 			for (size_t x = 0; x < mFinalTransforms.size(); ++x) {
 				mBlendedTransforms[x] += mFinalTransforms[x] * weight;
 			}
@@ -201,29 +215,28 @@ struct AnimationController {
 		mBoneOffsets.resize(mBoneMappings.size());
 		mFinalTransforms.resize(mBoneMappings.size());
 		mBoneOffsets[id] = boneOffset;
-		std::cout << "Bone " << name << " mapped to " << id << std::endl;
+		//std::cout << "Bone " << name << " mapped to " << id << std::endl;
 		return id;
 	}
 
-	void ReadNodeHierarchy(size_t index, float absoluteTime, const aiNode* pNode) {
+	void ReadNodeHierarchy(size_t index, float absoluteTime) {
 		const auto& animation = mAnimations[index];
 		const auto animationTime = animation->GetAnimationTime(absoluteTime);
-		ReadNodeHierarchy(animation, animationTime, pNode, mGlobalInverseTransform);
+		ReadNodeHierarchy(animation, animationTime, mRootNode, mGlobalInverseTransform);
 	}
 
-	void ReadNodeHierarchy(Animation_ animation, const float time, const aiNode* pNode, const glm::mat4 parentTransform) {
-		const std::string nodeName(pNode->mName.data);
-		const auto nodeTransform = animation->GetNodeTransform(time, pNode, nodeName);
+	void ReadNodeHierarchy(Animation_ animation, const float time, const AnimationNode_ node, const glm::mat4 parentTransform) {
+		const auto nodeTransform = animation->GetNodeTransform(time, node);
 		const auto combinedTransform = parentTransform * nodeTransform;
 		
-		const auto it = mBoneMappings.find(nodeName);
+		const auto it = mBoneMappings.find(node->mName); // TODO: node->mBoneIndex?
 		if (it != mBoneMappings.end()) {
 			const auto boneIndex = it->second;
 			mFinalTransforms[boneIndex] = combinedTransform * mBoneOffsets[boneIndex];
 		}
 
-		for (unsigned int i = 0; i < pNode->mNumChildren; i++) {
-			ReadNodeHierarchy(animation, time, pNode->mChildren[i], combinedTransform);
+		for(auto& childNode : node->mChildren) {
+			ReadNodeHierarchy(animation, time, childNode, combinedTransform);
 		}
 	}
 };

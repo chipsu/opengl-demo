@@ -1,5 +1,14 @@
 #include "Model.h"
 
+#include <assimp/cimport.h>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+
+inline glm::vec3 make_vec3(const aiVector3D& v) { return glm::vec3(v.x, v.y, v.z); }
+inline glm::vec2 make_vec2(const aiVector2D& v) { return glm::vec2(v.x, v.y); }
+inline glm::quat make_quat(const aiQuaternion& q) { return glm::quat(q.w, q.x, q.y, q.z); }
+inline glm::mat4 make_mat4(const aiMatrix4x4& m) { return glm::transpose(glm::make_mat4(&m.a1)); }
+
 void ValidateMesh(Mesh_ mesh, AnimationController_ animationController) {
     assert(mesh->mIndices.size() > 0);
     for (size_t i = 0; i < mesh->mIndices.size(); ++i) {
@@ -87,6 +96,17 @@ void LoadNode(Model* model, const aiScene* scene, const aiNode* node) {
     }
 }
 
+AnimationNode_ LoadHierarchy(Model* model, const aiNode* node, AnimationNode_ parent = nullptr) {
+    AnimationNode_ animationNode = std::make_shared<AnimationNode>(node->mName.data, parent, make_mat4(node->mTransformation));
+
+    for (unsigned int childIndex = 0; childIndex < node->mNumChildren; ++childIndex) {
+        auto childNode = LoadHierarchy(model, node->mChildren[childIndex], animationNode);
+        animationNode->mChildren.push_back(childNode);
+    }
+
+    return animationNode;
+}
+
 void LoadAnimations(Model* model, const aiScene* scene) {
     for (unsigned int animationIndex = 0; animationIndex < scene->mNumAnimations; ++animationIndex) {
         const auto aAnimation = scene->mAnimations[animationIndex];
@@ -149,18 +169,15 @@ void Model::Load(const std::string& fileName) {
     if (nullptr == scene) {
         throw new std::runtime_error(aiGetErrorString());
     }
-    if (nullptr != mTempScene) {
-        aiReleaseImport(mTempScene);
-    }
     mMeshes.clear();
     mAnimationController.reset();
     if (scene->mNumAnimations > 0) {
         mAnimationController = std::make_shared<AnimationController>();
+        mAnimationController->mRootNode = LoadHierarchy(this, scene->mRootNode);
         LoadAnimations(this, scene);
         FindGlobalInverseTransform(this, scene);
     }
     LoadNode(this, scene, scene->mRootNode);
+    aiReleaseImport(scene);
     UpdateAABB();
-    mTempScene = scene;
-    //aiReleaseImport(scene); // FIXME
 }

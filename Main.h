@@ -15,11 +15,6 @@
 #include <glm/gtx/hash.hpp>
 #include "glm/ext.hpp"
 
-// assimp
-#include <assimp/cimport.h>
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
-
 #include <cstring>
 #include <cstdlib>
 #include <cstdint>
@@ -31,11 +26,6 @@
 #include <stdexcept>
 #include <algorithm>
 #include <initializer_list>
-
-inline glm::vec3 make_vec3(const aiVector3D& v) { return glm::vec3(v.x, v.y, v.z); }
-inline glm::vec2 make_vec2(const aiVector2D& v) { return glm::vec2(v.x, v.y); }
-inline glm::quat make_quat(const aiQuaternion& q) { return glm::quat(q.w, q.x, q.y, q.z); }
-inline glm::mat4 make_mat4(const aiMatrix4x4& m) { return glm::transpose(glm::make_mat4(&m.a1)); }
 
 inline float GetTime() {
 	return (float)glfwGetTime();
