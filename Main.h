@@ -26,6 +26,7 @@
 #include <stdexcept>
 #include <algorithm>
 #include <initializer_list>
+#include <list>
 
 inline float GetTime() {
 	return (float)glfwGetTime();
@@ -42,7 +43,7 @@ inline glm::vec3 RandomColor() {
 inline std::string ReadFile(const std::string& path) {
 	std::ifstream stream(path, std::ios::in);
 	if (!stream.is_open()) {
-		std::string message = "Could not open shader file: " + path;
+		std::string message = "Could not open file: " + path;
 		throw new std::runtime_error(message);
 	}
 	std::stringstream buffer;
@@ -50,4 +51,17 @@ inline std::string ReadFile(const std::string& path) {
 	const auto source = buffer.str();
 	stream.close();
 	return source;
+}
+
+template<typename T>
+size_t SplitString(const std::string& str, const std::string& delim, T &result) {
+	size_t current = str.find(delim);
+	size_t previous = 0;
+	while (current != std::string::npos) {
+		result.push_back(str.substr(previous, current - previous));
+		previous = current + 1;
+		current = str.find(delim, previous);
+	}
+	result.push_back(str.substr(previous, current - previous));
+	return result.size();
 }

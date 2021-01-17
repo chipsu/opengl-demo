@@ -6,14 +6,44 @@
 
 Input* Input::sInstance = nullptr;
 
-Scene_ CreateScene() {
+Scene_ CreateScene(const int argc, const char** argv) {
 	auto scene = std::make_shared<Scene>();
-	auto model = std::make_shared<Model>();
-	model->Load("witch.fbx");
-	if (model->mAnimationController && model->mAnimationController->GetAnimationCount()) {
-		model->mAnimationController->SetAnimationIndex(0);
+	bool loadModel = true;
+
+	for (int i = 1; i < argc; ++i) {
+		std::string arg = argv[i];
+		
+		if (arg == "-s") {
+			std::list<std::string> config;
+			SplitString(ReadFile(argv[++i]), "\n", config);
+			config.erase(std::remove_if(config.begin(), config.end(), [](const std::string& s) { return s.length() == 0 || s[0] == '#'; }), config.end());
+			auto model = std::make_shared<Model>();
+			model->Load(config.front());
+			config.pop_front();
+			for (const auto& anim : config) {
+				model->LoadAnimation(anim, true);
+			}
+			scene->mEntities.push_back(std::make_shared<Entity>(model));
+		} else if (arg == "-m") {
+			loadModel = true;
+		} else if (arg == "-a") {
+			loadModel = false;
+		} else {
+			if (loadModel) {
+				auto model = std::make_shared<Model>();
+				model->Load(arg);
+				scene->mEntities.push_back(std::make_shared<Entity>(model));
+			} else {
+				scene->mEntities.back()->mModel->LoadAnimation(arg, true);
+			}
+		}
 	}
-	scene->mEntities.push_back(std::make_shared<Entity>(model));
+	for (const auto& entity : scene->mEntities) {
+		const auto& model = entity->mModel;
+		if (model && model->mAnimationController && model->mAnimationController->GetAnimationCount()) {
+			model->mAnimationController->SetAnimationIndex(0);
+		}
+	}
 	scene->mCameraCenter = scene->mEntities[0]->mModel->mAABB.mCenter;
 	scene->mCameraDistance = glm::length(scene->mEntities[0]->mModel->mAABB.mHalfSize) * 2.0f;
 	return scene;
@@ -52,7 +82,7 @@ int main(const int argc, const char **argv) {
 		return -1;
 	}
 
-	auto scene = CreateScene();;
+	auto scene = CreateScene(argc, argv);
 	auto input = std::make_shared<Input>(window, scene);
 
 	int windowWidth, windowHeight;

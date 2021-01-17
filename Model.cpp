@@ -9,6 +9,26 @@ inline glm::vec2 make_vec2(const aiVector2D& v) { return glm::vec2(v.x, v.y); }
 inline glm::quat make_quat(const aiQuaternion& q) { return glm::quat(q.w, q.x, q.y, q.z); }
 inline glm::mat4 make_mat4(const aiMatrix4x4& m) { return glm::transpose(glm::make_mat4(&m.a1)); }
 
+const aiNode* FindMeshRoot(const aiNode* node) {
+    if (node->mNumMeshes) {
+        return node;
+    }
+    for (size_t i = 0; i < node->mNumChildren; ++i) {
+        auto n = FindMeshRoot(node->mChildren[i]);
+        if (nullptr != n) return n;
+    }
+    return nullptr;
+}
+
+glm::mat4 FindGlobalInverseTransform(const aiScene* scene) {
+    const auto node = FindMeshRoot(scene->mRootNode);
+    auto transform = make_mat4(node ? node->mTransformation : scene->mRootNode->mTransformation);
+    transform = glm::inverse(transform);
+    std::cout << "global inverse: " << glm::to_string(transform) << std::endl;
+    std::cout << "From node: " << (node ? node->mName.data : scene->mRootNode->mName.data) << std::endl;
+    return transform;
+}
+
 void ValidateMesh(Mesh_ mesh, AnimationController_ animationController) {
     assert(mesh->mIndices.size() > 0);
     for (size_t i = 0; i < mesh->mIndices.size(); ++i) {
@@ -96,6 +116,7 @@ void LoadNode(Model* model, const aiScene* scene, const aiNode* node) {
             }
         }
 
+        // FIXME
         if (model->mAnimationController) {
             LoadBoneWeights(model, mesh, nodeMesh);
         }
@@ -122,6 +143,14 @@ AnimationNode_ LoadHierarchy(Model* model, const aiNode* node, AnimationNode_ pa
 }
 
 void LoadAnimations(Model* model, const aiScene* scene) {
+    //if (scene->mNumAnimations < 1) return;
+
+    // FIXME: Store elsewhere?
+    if (!model->mAnimationController) {
+        model->mAnimationController = std::make_shared<AnimationController>();
+        model->mAnimationController->mGlobalInverseTransform = FindGlobalInverseTransform(scene); // FIXME
+    }
+
     for (unsigned int animationIndex = 0; animationIndex < scene->mNumAnimations; ++animationIndex) {
         const auto aAnimation = scene->mAnimations[animationIndex];
         if (!aAnimation->mNumChannels) continue; // TODO: Stuff
@@ -157,57 +186,30 @@ void LoadAnimations(Model* model, const aiScene* scene) {
     }
 }
 
-const aiNode* FindMeshRoot(const aiNode* node) {
-    if (node->mNumMeshes) {
-        return node;
-    }
-    for (size_t i = 0; i < node->mNumChildren; ++i) {
-        auto n = FindMeshRoot(node->mChildren[i]);
-        if (nullptr != n) return n;
-    }
-    return nullptr;
-}
-
-void FindGlobalInverseTransform(Model* model, const aiScene* scene) {
-    const auto node = FindMeshRoot(scene->mRootNode);
-    auto transform = make_mat4(node ? node->mTransformation : scene->mRootNode->mTransformation);
-    transform = glm::inverse(transform);
-    std::cout << "global inverse: " << glm::to_string(transform) << std::endl;
-    std::cout << "From node: " << (node ? node->mName.data : scene->mRootNode->mName.data) << std::endl;
-    model->mAnimationController->mGlobalInverseTransform = transform;
-}
-
-void Model::Load(const std::string& fileName) {
-    Load(fileName, {});
-}
-
-void Model::Load(const std::string& fileName, const std::vector<std::string>& animations) {
+const aiScene* LoadScene(const std::string& fileName) {
     // FIXME: config
     auto target = aiProcess_CalcTangentSpace | aiProcess_JoinIdenticalVertices | aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_LimitBoneWeights;
-    const auto scene = aiImportFile(fileName.c_str(), target);
+    auto scene = aiImportFile(fileName.c_str(), target);
     if (nullptr == scene) {
         throw new std::runtime_error(aiGetErrorString());
     }
-    std::vector<const aiScene*> animationScenes;
-    if (scene->mNumAnimations > 0) animationScenes.push_back(scene); // FIXME
-    for (const auto& animationFile : animations) {
-        const auto animationScene = aiImportFile(animationFile.c_str(), target); // FIXME target
-        if (nullptr == animationScene) {
-            throw new std::runtime_error(aiGetErrorString());
-        }
-        assert(animationScene->mNumAnimations);
-        animationScenes.push_back(animationScene);
-    }
+    return scene;
+}
+
+void Model::Load(const std::string& fileName) {
+    const auto scene = LoadScene(fileName);
     mMeshes.clear();
     mAnimationController.reset();
-    if (animationScenes.size() > 0) {
-        mAnimationController = std::make_shared<AnimationController>();
-        FindGlobalInverseTransform(this, scene); // FIXME
-        for (const auto animationScene : animationScenes) {
-            LoadAnimations(this, animationScene);
-        }
-    }
+    LoadAnimations(this, scene);
     LoadNode(this, scene, scene->mRootNode);
     aiReleaseImport(scene);
     UpdateAABB();
+}
+
+void Model::LoadAnimation(const std::string& fileName, bool append) {
+    const auto scene = LoadScene(fileName);
+    if (!append) {
+        mAnimationController.reset();
+    }
+    LoadAnimations(this, scene);
 }

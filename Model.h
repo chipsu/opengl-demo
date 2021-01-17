@@ -15,7 +15,7 @@ struct Model {
 		}
 	}
 	void Load(const std::string& fileName);
-	void Load(const std::string& fileName, const std::vector<std::string>& animations);
+	void LoadAnimation(const std::string& fileName, bool append = false);
 	void UpdateAABB() {
 		AABB aabb;
 		for (const auto& mesh : mMeshes) {
