@@ -93,6 +93,7 @@ struct Animation {
 	std::vector<AnimationTrack_> mAnimationTracks;
 	float mTicksPerSecond = 0;
 	float mDuration = 0;
+	AnimationNode_ mRootNode;
 
 	// TODO: Map by Name
 	AnimationTrack_ GetAnimationTrack(const std::string& name) const {
@@ -128,7 +129,6 @@ struct AnimationController {
 	std::vector<glm::mat4> mBoneOffsets;
 	std::vector<glm::mat4> mFinalTransforms;
 	glm::mat4 mGlobalInverseTransform;
-	AnimationNode_ mRootNode; // FIXME: Move to Animation
 
 	AnimationController() {
 		//MapBone("___NULL___", glm::identity<glm::mat4>());
@@ -223,7 +223,7 @@ struct AnimationController {
 	void ReadNodeHierarchy(size_t index, float absoluteTime) {
 		const auto& animation = mAnimations[index];
 		const auto animationTime = animation->GetAnimationTime(absoluteTime);
-		ReadNodeHierarchy(animation, animationTime, mRootNode, mGlobalInverseTransform);
+		ReadNodeHierarchy(animation, animationTime, animation->mRootNode, mGlobalInverseTransform);
 	}
 
 	void ReadNodeHierarchy(Animation_ animation, const float time, const AnimationNode_ node, const glm::mat4 parentTransform) {

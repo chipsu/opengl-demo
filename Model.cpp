@@ -129,6 +129,7 @@ void LoadAnimations(Model* model, const aiScene* scene) {
         animation->mName = aAnimation->mName.data;
         animation->mTicksPerSecond = (float)aAnimation->mTicksPerSecond;
         animation->mDuration = (float)aAnimation->mDuration;
+        animation->mRootNode = LoadHierarchy(model, scene->mRootNode);
 
         for (unsigned int channelIndex = 0; channelIndex < aAnimation->mNumChannels; ++channelIndex) {
             const auto aChannel = aAnimation->mChannels[channelIndex];
@@ -201,11 +202,9 @@ void Model::Load(const std::string& fileName, const std::vector<std::string>& an
     mAnimationController.reset();
     if (animationScenes.size() > 0) {
         mAnimationController = std::make_shared<AnimationController>();
-        mAnimationController->mRootNode = LoadHierarchy(this, scene->mRootNode);
         FindGlobalInverseTransform(this, scene); // FIXME
         for (const auto animationScene : animationScenes) {
             LoadAnimations(this, animationScene);
-            mAnimationController->mRootNode = LoadHierarchy(this, animationScene->mRootNode); // FIXME!
         }
     }
     LoadNode(this, scene, scene->mRootNode);
