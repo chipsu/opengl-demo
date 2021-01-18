@@ -57,6 +57,11 @@ ShaderProgram_ CreateShaderProgram() {
 	return std::make_shared<ShaderProgram>(shaders);
 }
 
+float get_deque(void* data, int idx) {
+	auto deque = (std::deque<float>*)data;
+	return deque->at(idx);
+}
+
 int main(const int argc, const char **argv) {
 	if (!glfwInit()) {
 		std::cerr << "glfwInit failed" << std::endl;
@@ -68,7 +73,9 @@ int main(const int argc, const char **argv) {
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 
-	auto window = glfwCreateWindow(1280, 720, "OpenGL Animation Demo", NULL, NULL);
+	const std::string windowTitle = "OpenGL Animation Demo";
+
+	auto window = glfwCreateWindow(1280, 720, windowTitle.c_str(), NULL, NULL);
 	if (!window) {
 		std::cerr << "glfwCreateWindow failed" << std::endl;
 		glfwTerminate();
@@ -101,7 +108,6 @@ int main(const int argc, const char **argv) {
 	const GLuint uniformModel = glGetUniformLocation(program->mID, "uModel");
 	const GLuint uniformBones = glGetUniformLocation(program->mID, "uBones");
 	
-	float timer = GetTime();
 	bool useBlender = false;
 	bool animDetails = false;
 	bool meshDetails = false;
@@ -109,9 +115,17 @@ int main(const int argc, const char **argv) {
 	auto selectedModel = scene->mEntities[0]->mModel;
 	std::vector<float> selectedWeights;
 
+	FrameCounter<float> fps;
+	fps.mHistoryLimit = 30;
+
+	Timer<float> timer;
+
 	while (!glfwWindowShouldClose(window)) {
-		float now = GetTime();
-		float deltaTime = now - timer;
+		timer.Update();
+
+		if (fps.Tick(timer.mNow)) {
+			glfwSetWindowTitle(window, (windowTitle + " - FPS: " + std::to_string(fps.mValue)).c_str());
+		}
 
 		glfwSwapBuffers(window);
 
@@ -124,11 +138,12 @@ int main(const int argc, const char **argv) {
 			glfwSetWindowShouldClose(window, 1);
 		}
 
-		scene->Update(now, deltaTime);
+		scene->Update(timer.mNow, timer.mDelta);
 
 		ui->NewFrame();
 
 		//ImGui::ShowDemoWindow();
+		ImGui::PlotHistogram("FPS", get_deque, (void*)&fps.mHistory, fps.mHistory.size());
 
 		if (selectedModel) {
 			ImGui::Checkbox("Model info", &meshDetails);
@@ -160,7 +175,7 @@ int main(const int argc, const char **argv) {
 			ImGui::Checkbox("Blend", &useBlender);
 
 			if (useBlender) {
-				ac->UpdateBlended(now); // FIXME
+				ac->UpdateBlended(timer.mNow); // FIXME
 				// FIXME
 				if (selectedWeights.size() != ac->GetAnimationCount()) {
 					selectedWeights.resize(ac->GetAnimationCount());
@@ -203,8 +218,6 @@ int main(const int argc, const char **argv) {
 		}
 
 		ui->Render();
-
-		timer = now;
 	}
 
 	input.reset();

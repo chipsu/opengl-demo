@@ -27,6 +27,7 @@
 #include <algorithm>
 #include <initializer_list>
 #include <list>
+#include <deque>
 
 inline float GetTime() {
 	return (float)glfwGetTime();
@@ -65,3 +66,47 @@ size_t SplitString(const std::string& str, const std::string& delim, T &result) 
 	result.push_back(str.substr(previous, current - previous));
 	return result.size();
 }
+
+template<typename T>
+struct Timer {
+	T mNow = 0;
+	T mDelta = 0;
+	T mLastUpdate = 0;
+
+	void Update() {
+		mNow = (T)glfwGetTime();
+		mDelta = mNow - mLastUpdate;
+		mLastUpdate = mNow;
+	}
+};
+
+template<typename T>
+struct FrameCounter {
+	std::deque<T> mHistory;
+	size_t mHistoryLimit = 0;
+	size_t mCounter = 0;
+	T mInterval = 1.0;
+	T mNextUpdate = 0;
+	size_t mValue = 0;
+
+	bool Tick(const T now) {
+		mCounter++;
+		if (mNextUpdate > now) return false;
+		mValue = mCounter;
+		if (mHistoryLimit > 0) {
+			mHistory.push_back(mValue);
+			if (mHistory.size() > mHistoryLimit) {
+				mHistory.pop_front();
+			}
+		}
+		mNextUpdate = now + mInterval;
+		mCounter = 0;
+		return true;
+	}
+
+	size_t fps = 0;
+	float fps_timer = 0;
+	size_t fps_counter = 0;
+	std::deque<float> fps_history;
+	float timer = GetTime();
+};
