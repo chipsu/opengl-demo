@@ -220,6 +220,7 @@ int main(const int argc, const char **argv) {
 		ui->Render();
 	}
 
+	selectedModel = nullptr;
 	input.reset();
 	scene.reset();
 	program.reset();
