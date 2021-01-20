@@ -21,8 +21,8 @@ struct Scene {
 	std::vector<Entity_> mEntities;
 
 	float mCameraDistance = 10.0f;
-	float mCameraRotation = 0.0f;
-	glm::vec3 mCameraCenter = { 0, 0, 0 };
+	float mCameraRotationX = 0.0f;
+	float mCameraRotationY = 0.0f;
 
 	void Update(float absoluteTime, float deltaTime) {
 		for (auto& entity : mEntities) {

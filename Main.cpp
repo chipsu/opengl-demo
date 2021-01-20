@@ -44,7 +44,6 @@ Scene_ CreateScene(const int argc, const char** argv) {
 			model->mAnimationController->SetAnimationIndex(0);
 		}
 	}
-	scene->mCameraCenter = scene->mEntities[0]->mModel->mAABB.mCenter;
 	scene->mCameraDistance = glm::length(scene->mEntities[0]->mModel->mAABB.mHalfSize) * 2.0f;
 	return scene;
 }
@@ -61,6 +60,61 @@ float get_deque(void* data, int idx) {
 	auto deque = (std::deque<float>*)data;
 	return deque->at(idx);
 }
+
+struct Camera {
+	glm::vec3 mPos = { 0,0,0 };
+	glm::vec3 mFront = { 0,1,0 };
+	glm::vec3 mUp = { 0,0,1 };
+
+	float mFov = glm::radians(45.0f);
+	float mAspect = 1.0f;
+	float mNear = 0.1f;
+	float mFar = 1000.0f;
+
+	glm::mat4 mView;
+	glm::mat4 mProjection;
+
+	// TODO: wow camera, move around char (yaw,pitch + distance?)
+
+	void Look(float yaw, float pitch) {
+		glm::vec3 dir = {
+			cos(glm::radians(yaw)) * cos(glm::radians(pitch)),
+			sin(glm::radians(pitch)),
+			sin(glm::radians(yaw)) * cos(glm::radians(pitch)),
+		};
+		mFront = glm::normalize(dir);
+	}
+
+	void Walk(float f) {
+		mPos += mFront * f;
+	}
+
+	void Strafe(float f) {
+		mPos += glm::normalize(glm::cross(mFront, mUp)) * f;
+	}
+
+	void Altitude(float f) {
+		mPos += mUp * f;
+	}
+
+	/*void Move(const glm::vec3& v) {
+		mPos += glm::normalize(glm::cross(mFront, mUp)) * v.x;
+		mPos += mFront * v.y;
+		mPos += mUp * v.z;
+	}*/
+
+	void SetAspect(int width, int height) {
+		mFov = width / (float)height;
+	}
+
+	void UpdateView() {
+		mView = glm::lookAt(mPos, mPos + mFront, mUp);
+	}
+
+	void UpdateProjection() {
+		mProjection = glm::perspective(mFov, mAspect, mNear, mFar);
+	}
+};
 
 int main(const int argc, const char **argv) {
 	if (!glfwInit()) {
@@ -115,6 +169,12 @@ int main(const int argc, const char **argv) {
 	auto selectedModel = scene->mEntities[0]->mModel;
 	std::vector<float> selectedWeights;
 
+	Camera cam;
+	cam.SetAspect(windowWidth, windowHeight);
+	cam.Walk(-scene->mCameraDistance); // FIXME
+	cam.Altitude(scene->mCameraDistance * 0.5); // FIXME
+	float cameraSpeed = 1.0f;
+
 	FrameCounter<float> fps;
 	fps.mHistoryLimit = 30;
 
@@ -137,6 +197,22 @@ int main(const int argc, const char **argv) {
 		if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
 			glfwSetWindowShouldClose(window, 1);
 		}
+
+		if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+			cam.Walk(timer.mDelta * cameraSpeed);
+		if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+			cam.Walk(timer.mDelta * -cameraSpeed);
+		if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+			cam.Strafe(timer.mDelta * -cameraSpeed);
+		if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+			cam.Strafe(timer.mDelta * cameraSpeed);
+		if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+			cam.Altitude(timer.mDelta * -cameraSpeed);
+		if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+			cam.Altitude(timer.mDelta * cameraSpeed);
+
+		cam.UpdateView();
+		cam.UpdateProjection();
 
 		scene->Update(timer.mNow, timer.mDelta);
 
@@ -195,12 +271,11 @@ int main(const int argc, const char **argv) {
 			ImGui::End();
 		}
 
-		glm::mat4 modl = glm::rotate(glm::identity<glm::mat4>(), scene->mCameraRotation * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-		glm::mat4 view = glm::lookAt(glm::vec3(scene->mCameraDistance), scene->mCameraCenter, glm::vec3(0.0f, 0.0f, 1.0f));
-		glm::mat4 proj = glm::perspective(glm::radians(45.0f), windowWidth / (float)windowHeight, 0.1f, 10000.0f);
+		glm::mat4 modl = glm::rotate(glm::identity<glm::mat4>(), scene->mCameraRotationX, glm::vec3(0, 0, 1));
+		modl = glm::rotate(modl, scene->mCameraRotationY, glm::vec3(1, 0, 0));
 
-		glUniformMatrix4fv(uniformProj, 1, GL_FALSE, (GLfloat*)&proj[0]);
-		glUniformMatrix4fv(uniformView, 1, GL_FALSE, (GLfloat*)&view[0]);
+		glUniformMatrix4fv(uniformProj, 1, GL_FALSE, (GLfloat*)&cam.mProjection[0]);
+		glUniformMatrix4fv(uniformView, 1, GL_FALSE, (GLfloat*)&cam.mView[0]);
 		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, (GLfloat*)&modl[0]);
 
 		for (auto& entity : scene->mEntities) {
