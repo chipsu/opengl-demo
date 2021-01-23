@@ -6,6 +6,30 @@
 
 Input* Input::sInstance = nullptr;
 
+void LoadScene(Scene_ scene, const std::string& fileName) {
+	rapidjson::Document config;
+	std::ifstream ifs(fileName);
+	rapidjson::IStreamWrapper isw(ifs);
+	config.ParseStream(isw);
+
+	for (const auto& cfg : config["entities"].GetArray()) {
+		if(cfg.HasMember("disabled") && cfg["disabled"].GetBool()) continue;
+		auto model = std::make_shared<Model>();
+		auto entity = std::make_shared<Entity>(model);
+		model->Load(cfg["model"].GetString());
+		if (cfg.HasMember("animations")) {
+			for (const auto& anim : cfg["animations"].GetArray()) {
+				model->LoadAnimation(anim.GetString());
+			}
+		}
+		if (cfg.HasMember("position")) {
+			const auto& pos = cfg["position"].GetArray();
+			entity->mPos = { pos[0].GetFloat(), pos[1].GetFloat(), pos[2].GetFloat() };
+		}
+		scene->mEntities.push_back(entity);
+	}
+}
+
 Scene_ CreateScene(const int argc, const char** argv) {
 	auto scene = std::make_shared<Scene>();
 	bool loadModel = true;
@@ -14,16 +38,7 @@ Scene_ CreateScene(const int argc, const char** argv) {
 		std::string arg = argv[i];
 		
 		if (arg == "-s") {
-			std::list<std::string> config;
-			SplitString(ReadFile(argv[++i]), "\n", config);
-			config.erase(std::remove_if(config.begin(), config.end(), [](const std::string& s) { return s.length() == 0 || s[0] == '#'; }), config.end());
-			auto model = std::make_shared<Model>();
-			model->Load(config.front());
-			config.pop_front();
-			for (const auto& anim : config) {
-				model->LoadAnimation(anim, true);
-			}
-			scene->mEntities.push_back(std::make_shared<Entity>(model));
+			LoadScene(scene, argv[++i]);
 		} else if (arg == "-m") {
 			loadModel = true;
 		} else if (arg == "-a") {
@@ -198,6 +213,8 @@ int main(const int argc, const char **argv) {
 			glfwSetWindowShouldClose(window, 1);
 		}
 
+		cameraSpeed = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) ? 5.0f : 1.0f;
+
 		if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
 			cam.Walk(timer.mDelta * cameraSpeed);
 		if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
@@ -271,12 +288,12 @@ int main(const int argc, const char **argv) {
 			ImGui::End();
 		}
 
-		glm::mat4 modl = glm::rotate(glm::identity<glm::mat4>(), scene->mCameraRotationX, glm::vec3(0, 0, 1));
-		modl = glm::rotate(modl, scene->mCameraRotationY, glm::vec3(1, 0, 0));
+		//glm::mat4 modl = glm::rotate(glm::identity<glm::mat4>(), scene->mCameraRotationX, glm::vec3(0, 0, 1));
+		//modl = glm::rotate(modl, scene->mCameraRotationY, glm::vec3(1, 0, 0));
 
 		glUniformMatrix4fv(uniformProj, 1, GL_FALSE, (GLfloat*)&cam.mProjection[0]);
 		glUniformMatrix4fv(uniformView, 1, GL_FALSE, (GLfloat*)&cam.mView[0]);
-		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, (GLfloat*)&modl[0]);
+		//glUniformMatrix4fv(uniformModel, 1, GL_FALSE, (GLfloat*)&modl[0]);
 
 		for (auto& entity : scene->mEntities) {
 			const auto& model = entity->mModel;
@@ -285,6 +302,8 @@ int main(const int argc, const char **argv) {
 				const auto& bones = useBlender ? model->mAnimationController->mBlendedTransforms : model->mAnimationController->mFinalTransforms;
 				glUniformMatrix4fv(uniformBones, bones.size(), GL_FALSE, (GLfloat*)&bones[0]);
 			}
+			auto modl = glm::translate(glm::identity<glm::mat4>(), entity->mPos);
+			glUniformMatrix4fv(uniformModel, 1, GL_FALSE, (GLfloat*)&modl[0]);
 			for (auto& mesh : model->mMeshes) {
 				if (mesh->mHidden) continue;
 				mesh->Bind();

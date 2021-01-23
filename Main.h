@@ -29,6 +29,9 @@
 #include <list>
 #include <deque>
 
+#include <rapidjson/document.h>
+#include <rapidjson/istreamwrapper.h>
+
 inline float GetTime() {
 	return (float)glfwGetTime();
 }
