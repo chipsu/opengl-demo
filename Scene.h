@@ -24,6 +24,8 @@ struct Scene {
 	float mCameraRotationX = 0.0f;
 	float mCameraRotationY = 0.0f;
 
+	void Load(const std::string& fileName);
+
 	void Update(float absoluteTime, float deltaTime) {
 		for (auto& entity : mEntities) {
 			entity->Update(absoluteTime, deltaTime);

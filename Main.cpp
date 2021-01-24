@@ -6,30 +6,6 @@
 
 Input* Input::sInstance = nullptr;
 
-void LoadScene(Scene_ scene, const std::string& fileName) {
-	rapidjson::Document config;
-	std::ifstream ifs(fileName);
-	rapidjson::IStreamWrapper isw(ifs);
-	config.ParseStream(isw);
-
-	for (const auto& cfg : config["entities"].GetArray()) {
-		if(cfg.HasMember("disabled") && cfg["disabled"].GetBool()) continue;
-		auto model = std::make_shared<Model>();
-		auto entity = std::make_shared<Entity>(model);
-		model->Load(cfg["model"].GetString());
-		if (cfg.HasMember("animations")) {
-			for (const auto& anim : cfg["animations"].GetArray()) {
-				model->LoadAnimation(anim.GetString());
-			}
-		}
-		if (cfg.HasMember("position")) {
-			const auto& pos = cfg["position"].GetArray();
-			entity->mPos = { pos[0].GetFloat(), pos[1].GetFloat(), pos[2].GetFloat() };
-		}
-		scene->mEntities.push_back(entity);
-	}
-}
-
 Scene_ CreateScene(const int argc, const char** argv) {
 	auto scene = std::make_shared<Scene>();
 	bool loadModel = true;
@@ -38,7 +14,7 @@ Scene_ CreateScene(const int argc, const char** argv) {
 		std::string arg = argv[i];
 		
 		if (arg == "-s") {
-			LoadScene(scene, argv[++i]);
+			scene->Load(argv[++i]);
 		} else if (arg == "-m") {
 			loadModel = true;
 		} else if (arg == "-a") {
