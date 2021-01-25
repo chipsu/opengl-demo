@@ -20,6 +20,14 @@ void Scene::Load(const std::string& fileName) {
 			const auto& pos = cfg["position"].GetArray();
 			entity->mPos = { pos[0].GetFloat(), pos[1].GetFloat(), pos[2].GetFloat() };
 		}
+		if (cfg.HasMember("rotation")) {
+			const auto& pos = cfg["rotation"].GetArray();
+			entity->mRot = glm::quat(glm::vec3(glm::radians(pos[0].GetFloat()), glm::radians(pos[1].GetFloat()), glm::radians(pos[2].GetFloat())));
+		}
+		if (cfg.HasMember("scale")) {
+			const auto& pos = cfg["scale"].GetArray();
+			entity->mScale = { pos[0].GetFloat(), pos[1].GetFloat(), pos[2].GetFloat() };
+		}
 		mEntities.push_back(entity);
 	}
 }

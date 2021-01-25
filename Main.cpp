@@ -76,6 +76,14 @@ struct Camera {
 		mFront = glm::normalize(dir);
 	}
 
+	void LookAt(const glm::vec3& v) {
+		mFront = glm::normalize(v - mPos);
+	}
+
+	void Pos(const glm::vec3& v) {
+		mPos = v;
+	}
+
 	void Walk(float f) {
 		mPos += mFront * f;
 	}
@@ -157,14 +165,13 @@ int main(const int argc, const char **argv) {
 	bool animDetails = false;
 	bool meshDetails = false;
 
-	auto selectedModel = scene->mEntities[0]->mModel;
+	auto selected = scene->mEntities[0];
+	auto selectedModel = selected->mModel;
 	std::vector<float> selectedWeights;
 
 	Camera cam;
 	cam.SetAspect(windowWidth, windowHeight);
-	cam.Walk(-scene->mCameraDistance); // FIXME
-	cam.Altitude(scene->mCameraDistance * 0.5); // FIXME
-	float cameraSpeed = 1.0f;
+	float movementSpeed = 1.0f;
 
 	FrameCounter<float> fps;
 	fps.mHistoryLimit = 30;
@@ -189,20 +196,27 @@ int main(const int argc, const char **argv) {
 			glfwSetWindowShouldClose(window, 1);
 		}
 
-		cameraSpeed = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) ? 5.0f : 1.0f;
+		if (nullptr != selected) {
+			movementSpeed = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) ? 5.0f : 1.0f;
 
-		if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-			cam.Walk(timer.mDelta * cameraSpeed);
-		if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-			cam.Walk(timer.mDelta * -cameraSpeed);
-		if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-			cam.Strafe(timer.mDelta * -cameraSpeed);
-		if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-			cam.Strafe(timer.mDelta * cameraSpeed);
-		if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
-			cam.Altitude(timer.mDelta * -cameraSpeed);
-		if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
-			cam.Altitude(timer.mDelta * cameraSpeed);
+			if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+				selected->Walk(timer.mDelta * movementSpeed);
+			if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+				selected->Walk(timer.mDelta * -movementSpeed);
+			if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+				selected->Strafe(timer.mDelta * -movementSpeed);
+			if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+				selected->Strafe(timer.mDelta * movementSpeed);
+			/*if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+				cam.Jump();
+			if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+				cam.Crounch();*/
+
+			//cam.Pos(selected->mPos - selected->mFront * scene->mCameraDistance);
+			cam.LookAt(selected->mPos);
+		}
+
+		cam.Pos(glm::vec3(2.0f) * scene->mCameraDistance); // FIXME
 
 		cam.UpdateView();
 		cam.UpdateProjection();
@@ -274,12 +288,14 @@ int main(const int argc, const char **argv) {
 		for (auto& entity : scene->mEntities) {
 			const auto& model = entity->mModel;
 			if (!model) continue;
-			if (model->mAnimationController) {
+			if (model->HasAnimations()) {
 				const auto& bones = useBlender ? model->mAnimationController->mBlendedTransforms : model->mAnimationController->mFinalTransforms;
 				glUniformMatrix4fv(uniformBones, bones.size(), GL_FALSE, (GLfloat*)&bones[0]);
 			}
-			auto modl = glm::translate(glm::identity<glm::mat4>(), entity->mPos);
-			glUniformMatrix4fv(uniformModel, 1, GL_FALSE, (GLfloat*)&modl[0]);
+			glm::mat4 transform = glm::translate(glm::identity<glm::mat4>(), entity->mPos);
+			transform *= glm::mat4_cast(entity->mRot);
+			transform = glm::scale(transform, entity->mScale);
+			glUniformMatrix4fv(uniformModel, 1, GL_FALSE, (GLfloat*)&transform[0]);
 			for (auto& mesh : model->mMeshes) {
 				if (mesh->mHidden) continue;
 				mesh->Bind();

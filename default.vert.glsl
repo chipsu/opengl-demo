@@ -16,13 +16,16 @@ layout(location=4) in uvec4 inBoneIndices;
 layout(location=0) out vec3 outColor;
 
 void main() {
-    mat4 boneTransform = uBones[inBoneIndices[0]] * inBoneWeights[0];
-    boneTransform += uBones[inBoneIndices[1]] * inBoneWeights[1];
-    boneTransform += uBones[inBoneIndices[2]] * inBoneWeights[2];
-    boneTransform += uBones[inBoneIndices[3]] * inBoneWeights[3];
+    if(inBoneWeights[0] > 0.0) {
+        mat4 boneTransform = uBones[inBoneIndices[0]] * inBoneWeights[0];
+        boneTransform += uBones[inBoneIndices[1]] * inBoneWeights[1];
+        boneTransform += uBones[inBoneIndices[2]] * inBoneWeights[2];
+        boneTransform += uBones[inBoneIndices[3]] * inBoneWeights[3];
     
-    gl_Position = uProj * uView * uModel * boneTransform * vec4(inPosition, 1.0);
-    //gl_Position = uProj * uView * uModel * vec4(inPosition, 1.0);
+        gl_Position = uProj * uView * uModel * boneTransform * vec4(inPosition, 1.0);
+    } else {
+        gl_Position = uProj * uView * uModel * vec4(inPosition, 1.0);
+    }
 
     outColor = inColor;
 

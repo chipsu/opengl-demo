@@ -6,6 +6,10 @@
 struct Entity {
 	Model_ mModel = nullptr;
 	glm::vec3 mPos = { 0,0,0 };
+	glm::vec3 mFront = { 0,1,0 };
+	glm::vec3 mUp = { 0,0,1 };
+	glm::quat mRot = { 0,0,0,1 };
+	glm::vec3 mScale = { 1,1,1 };
 	Entity() {}
 	Entity(Model_ model) : mModel(model) {}
 	Entity(Model_ model, const glm::vec3& pos) : mModel(model), mPos(pos) {}
@@ -13,6 +17,14 @@ struct Entity {
 		if (mModel) {
 			mModel->Update(absoluteTime, deltaTime);
 		}
+	}
+
+	void Walk(float f) {
+		mPos += mFront * f;
+	}
+
+	void Strafe(float f) {
+		mPos += glm::normalize(glm::cross(mFront, mUp)) * f;
 	}
 };
 typedef std::shared_ptr<Entity> Entity_;
