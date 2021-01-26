@@ -13,7 +13,7 @@ void Scene::Load(const std::string& fileName) {
 		model->Load(cfg["model"].GetString());
 		if (cfg.HasMember("animations")) {
 			for (const auto& anim : cfg["animations"].GetArray()) {
-				model->LoadAnimation(anim.GetString());
+				model->LoadAnimation(anim.GetString(), true);
 			}
 		}
 		if (cfg.HasMember("position")) {

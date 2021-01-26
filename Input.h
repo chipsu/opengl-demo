@@ -79,6 +79,9 @@ struct Input {
 				const auto animation = animationController->GetAnimation();
 				std::cout << "Animation: " << animationIndex << ", " << (animation ? animation->mName : "DISABLED") << std::endl;
 			}
+			if (key == GLFW_KEY_TAB) {
+				mScene->SelectNext();
+			}
 		}
 	}
 

@@ -35,7 +35,6 @@ Scene_ CreateScene(const int argc, const char** argv) {
 			model->mAnimationController->SetAnimationIndex(0);
 		}
 	}
-	scene->mCameraDistance = glm::length(scene->mEntities[0]->mModel->mAABB.mHalfSize) * 2.0f;
 	return scene;
 }
 
@@ -165,8 +164,6 @@ int main(const int argc, const char **argv) {
 	bool animDetails = false;
 	bool meshDetails = false;
 
-	auto selected = scene->mEntities[0];
-	auto selectedModel = selected->mModel;
 	std::vector<float> selectedWeights;
 
 	Camera cam;
@@ -196,27 +193,25 @@ int main(const int argc, const char **argv) {
 			glfwSetWindowShouldClose(window, 1);
 		}
 
-		if (nullptr != selected) {
+		if (nullptr != scene->mSelected) {
 			movementSpeed = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) ? 5.0f : 1.0f;
 
 			if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-				selected->Walk(timer.mDelta * movementSpeed);
+				scene->mSelected->Walk(timer.mDelta * movementSpeed);
 			if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-				selected->Walk(timer.mDelta * -movementSpeed);
+				scene->mSelected->Walk(timer.mDelta * -movementSpeed);
 			if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-				selected->Strafe(timer.mDelta * -movementSpeed);
+				scene->mSelected->Strafe(timer.mDelta * -movementSpeed);
 			if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-				selected->Strafe(timer.mDelta * movementSpeed);
+				scene->mSelected->Strafe(timer.mDelta * movementSpeed);
 			/*if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
 				cam.Jump();
 			if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
 				cam.Crounch();*/
 
-			//cam.Pos(selected->mPos - selected->mFront * scene->mCameraDistance);
-			cam.LookAt(selected->mPos);
+			cam.Pos(scene->mSelected->mPos - scene->mSelected->mFront * scene->mCameraDistance);
+			cam.LookAt(scene->mSelected->mPos);
 		}
-
-		cam.Pos(glm::vec3(2.0f) * scene->mCameraDistance); // FIXME
 
 		cam.UpdateView();
 		cam.UpdateProjection();
@@ -228,6 +223,8 @@ int main(const int argc, const char **argv) {
 		//ImGui::ShowDemoWindow();
 		ImGui::PlotHistogram("FPS", get_deque, (void*)&fps.mHistory, fps.mHistory.size());
 
+
+		auto selectedModel = scene->mSelected ? scene->mSelected->mModel : nullptr;
 		if (selectedModel) {
 			ImGui::Checkbox("Model info", &meshDetails);
 
@@ -306,7 +303,6 @@ int main(const int argc, const char **argv) {
 		ui->Render();
 	}
 
-	selectedModel = nullptr;
 	input.reset();
 	scene.reset();
 	program.reset();

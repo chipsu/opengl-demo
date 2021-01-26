@@ -36,11 +36,25 @@ struct Scene {
 	float mCameraRotationX = 0.0f;
 	float mCameraRotationY = 0.0f;
 
+	Entity_ mSelected;
+	size_t mSelectedIndex = -1;
+
 	void Load(const std::string& fileName);
 
 	void Update(float absoluteTime, float deltaTime) {
 		for (auto& entity : mEntities) {
 			entity->Update(absoluteTime, deltaTime);
+		}
+	}
+
+	void SelectNext() {
+		mSelectedIndex++;
+		if (mSelectedIndex > mEntities.size()) {
+			mSelectedIndex = 0;
+		}
+		mSelected = mSelectedIndex < mEntities.size() ? mEntities[mSelectedIndex] : nullptr;
+		if (nullptr != mSelected) {
+			mCameraDistance = glm::length(mSelected->mModel->mAABB.mHalfSize) * 2.0f; // FIXME
 		}
 	}
 };
