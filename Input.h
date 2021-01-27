@@ -110,6 +110,6 @@ struct Input {
 		const float scale = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ? 10.0f : 1.0f;
 		mScene->mCameraDistance -= (float)yoffset * scale;
 		mScene->mCameraDistance = glm::clamp(mScene->mCameraDistance, 1.0f, 1000.0f);
-		printf("SCROLL: %f\n", mScene->mCameraDistance);
+		//printf("SCROLL: %f\n", mScene->mCameraDistance);
 	}
 };
