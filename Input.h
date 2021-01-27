@@ -61,23 +61,25 @@ struct Input {
 	void OnKey(GLFWwindow* window, int key, int scancode, int action, int mods) {
 		if (false) printf("key_callback: %d %d %d\n", key, action, mods);
 		if (action == GLFW_RELEASE) {
-			auto& entity = mScene->mEntities[0];
-			auto& animationController = entity->mModel->mAnimationController;
-			if (key == GLFW_KEY_LEFT) {
-				SetDebugMesh(entity, mDebugMesh - 1);
-			}
-			if (key == GLFW_KEY_RIGHT) {
-				SetDebugMesh(entity, mDebugMesh + 1);
-			}
-			if (key == GLFW_KEY_UP) {
-				SetDebugMesh(entity, -1);
-			}
-			if (key == GLFW_KEY_SPACE) {
-				size_t animationIndex = animationController->GetAnimationIndex() + 1;
-				if (animationIndex >= animationController->GetAnimationCount()) animationIndex = -1;
-				animationController->SetAnimationIndex(animationIndex);
-				const auto animation = animationController->GetAnimation();
-				std::cout << "Animation: " << animationIndex << ", " << (animation ? animation->mName : "DISABLED") << std::endl;
+			auto& entity = mScene->mSelected;
+			if (nullptr != entity) {
+				auto& animationController = entity->mModel->mAnimationController;
+				if (key == GLFW_KEY_LEFT) {
+					SetDebugMesh(entity, mDebugMesh - 1);
+				}
+				if (key == GLFW_KEY_RIGHT) {
+					SetDebugMesh(entity, mDebugMesh + 1);
+				}
+				if (key == GLFW_KEY_UP) {
+					SetDebugMesh(entity, -1);
+				}
+				if (key == GLFW_KEY_ENTER) {
+					size_t animationIndex = animationController->GetAnimationIndex() + 1;
+					if (animationIndex >= animationController->GetAnimationCount()) animationIndex = -1;
+					animationController->SetAnimationIndex(animationIndex);
+					const auto animation = animationController->GetAnimation();
+					std::cout << "Animation: " << animationIndex << ", " << (animation ? animation->mName : "DISABLED") << std::endl;
+				}
 			}
 			if (key == GLFW_KEY_TAB) {
 				mScene->SelectNext();
