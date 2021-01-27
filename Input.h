@@ -92,7 +92,13 @@ struct Input {
 		if (false) printf("cursor_position_callback: %f %f\n", xpos, ypos);
 		if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_2) == GLFW_PRESS) {
 			mScene->mCameraRotationX = (mMouseX - xpos) * 0.025f;
-			mScene->mCameraRotationY = (mMouseY - ypos) * 0.025f;
+			mScene->mCameraRotationY = (mMouseY - xpos) * 0.025f;
+			/*float newY = mScene->mCameraRotationY + (mMouseY - ypos) * 0.025f;
+			const auto limitY = glm::half_pi<float>() * 0.9f;
+			newY = std::max(-limitY * 0.5f, std::min(newY, limitY));
+			mScene->mCameraRotationY = newY;
+			mMouseY = ypos;*/
+			//std::cout << mScene->mCameraRotationX << ", " << mScene->mCameraRotationY << std::endl;
 		} else {
 			mMouseX = xpos;
 			mMouseY = ypos;
