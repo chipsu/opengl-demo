@@ -132,6 +132,12 @@ int main(const int argc, const char **argv) {
 	const GLuint uniformView = glGetUniformLocation(program->mID, "uView");
 	const GLuint uniformModel = glGetUniformLocation(program->mID, "uModel");
 	const GLuint uniformBones = glGetUniformLocation(program->mID, "uBones");
+	const GLuint uLightPos = glGetUniformLocation(program->mID, "uLightPos");
+	const GLuint uViewPos = glGetUniformLocation(program->mID, "uViewPos");
+	const GLuint uLightColor = glGetUniformLocation(program->mID, "uLightColor");
+
+	glUniform3f(uLightPos, 100.0f, 100.0f, 100.0f);
+	glUniform3f(uLightColor, 1, 1, 1);
 	
 	bool useBlender = false;
 	bool animDetails = false;
@@ -264,6 +270,7 @@ int main(const int argc, const char **argv) {
 
 		glUniformMatrix4fv(uniformProj, 1, GL_FALSE, (GLfloat*)&cam.mProjection[0]);
 		glUniformMatrix4fv(uniformView, 1, GL_FALSE, (GLfloat*)&cam.mView[0]);
+		glUniform3fv(uViewPos, 1, (GLfloat*)&cam.mPos[0]);
 
 		for (auto& entity : scene->mEntities) {
 			const auto& model = entity->mModel;

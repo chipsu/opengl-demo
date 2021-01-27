@@ -14,6 +14,8 @@ layout(location=3) in vec4 inBoneWeights;
 layout(location=4) in uvec4 inBoneIndices;
 
 layout(location=0) out vec3 outColor;
+layout(location=1) out vec3 outNormal;
+layout(location=2) out vec3 outPosition;
 
 void main() {
     if(inBoneWeights[0] > 0.0) {
@@ -31,5 +33,7 @@ void main() {
 
     //outColor = vec3(inBoneWeights[0], inBoneWeights[1], inBoneWeights[2]);
     //outColor = vec3(inBoneIndices[0], inBoneIndices[1], inBoneIndices[2]);
-    outColor = inNormal;
+
+    outPosition = vec3(uModel * vec4(inPosition, 1.0));
+    outNormal = mat3(transpose(inverse(uModel))) * inNormal; 
 }
