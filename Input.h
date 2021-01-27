@@ -87,22 +87,18 @@ struct Input {
 
 	double mMouseX = 0;
 	double mMouseY = 0;
+	float mLimitY = glm::half_pi<float>() * 0.9f;
 
 	void OnMousePos(GLFWwindow* window, double xpos, double ypos) {
 		if (false) printf("cursor_position_callback: %f %f\n", xpos, ypos);
 		if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_2) == GLFW_PRESS) {
-			mScene->mCameraRotationX = (mMouseX - xpos) * 0.025f;
-			mScene->mCameraRotationY = (mMouseY - xpos) * 0.025f;
-			/*float newY = mScene->mCameraRotationY + (mMouseY - ypos) * 0.025f;
-			const auto limitY = glm::half_pi<float>() * 0.9f;
-			newY = std::max(-limitY * 0.5f, std::min(newY, limitY));
-			mScene->mCameraRotationY = newY;
-			mMouseY = ypos;*/
+			mScene->mCameraRotationX += (mMouseX - xpos) * 0.025f;
+			mScene->mCameraRotationY += (mMouseY - ypos) * 0.015f;
+			mScene->mCameraRotationY = glm::clamp(mScene->mCameraRotationY, -mLimitY, mLimitY);
 			//std::cout << mScene->mCameraRotationX << ", " << mScene->mCameraRotationY << std::endl;
-		} else {
-			mMouseX = xpos;
-			mMouseY = ypos;
 		}
+		mMouseX = xpos;
+		mMouseY = ypos;
 	}
 
 	void OnMouseButton(GLFWwindow* window, int button, int action, int mods) {
@@ -112,7 +108,8 @@ struct Input {
 	void OnMouseScroll(GLFWwindow* window, double xoffset, double yoffset) {
 		if (false) printf("scroll_callback: %f %f\n", xoffset, yoffset);
 		const float scale = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ? 10.0f : 1.0f;
-		mScene->mCameraDistance += (float)yoffset * scale;
+		mScene->mCameraDistance -= (float)yoffset * scale;
+		mScene->mCameraDistance = glm::clamp(mScene->mCameraDistance, 1.0f, 1000.0f);
 		printf("SCROLL: %f\n", mScene->mCameraDistance);
 	}
 };

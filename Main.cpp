@@ -184,8 +184,8 @@ int main(const int argc, const char **argv) {
 				cam.Crounch();*/
 
 			const auto rotX = glm::rotate(glm::identity<glm::mat4>(), scene->mCameraRotationX, cam.mUp);
-			//const auto rot = glm::rotate(rotX, scene->mCameraRotationY, cam.mLeft); // FIXMEE
-			const auto posRot = rotX * glm::vec4(scene->mSelected->mFront * scene->mCameraDistance, 1.0f);
+			const auto rotY = glm::rotate(glm::identity<glm::mat4>(), scene->mCameraRotationY, cam.mLeft);
+			const auto posRot = rotX * rotY * glm::vec4(scene->mSelected->mFront * scene->mCameraDistance, 1.0f);
 			const auto targetPos = glm::vec3(posRot) + scene->mSelected->mPos;
 
 			if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_2) == GLFW_PRESS) {
