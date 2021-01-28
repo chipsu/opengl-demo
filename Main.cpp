@@ -189,8 +189,10 @@ int main(const int argc, const char **argv) {
 			if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
 				cam.Crounch();*/
 
-			const auto camOffset = scene->mSelected->mPos + scene->mSelected->mFront * -scene->mCameraDistance;
-			const auto camCenter = scene->mSelected->mPos;
+			auto selectedCenter = scene->mSelected->mPos;
+			selectedCenter.z += scene->mSelected->mModel->mAABB.mHalfSize.z; // FIXME
+			const auto camOffset = selectedCenter + scene->mSelected->mFront * -scene->mCameraDistance;
+			const auto camCenter = selectedCenter;
 			const auto rotX = glm::rotate(glm::identity<glm::mat4>(), scene->mCameraRotationX, cam.mUp);
 			const auto rotY = glm::rotate(glm::identity<glm::mat4>(), scene->mCameraRotationY, cam.mLeft);
 			const auto posRot = rotX * rotY * glm::vec4(camOffset - camCenter, 1.0f);
@@ -198,10 +200,10 @@ int main(const int argc, const char **argv) {
 
 			if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_2) == GLFW_PRESS) {
 				cam.mPos = targetPos;
-				cam.mFront = glm::normalize(scene->mSelected->mPos - cam.mPos);
+				cam.mFront = glm::normalize(selectedCenter - cam.mPos);
 			} else {
 				cam.mPos = glm::lerp(cam.mPos, targetPos, timer.mDelta * camSpeed);
-				cam.mFront = glm::lerp(cam.mFront, glm::normalize(scene->mSelected->mPos - cam.mPos), timer.mDelta * camSpeed);
+				cam.mFront = glm::lerp(cam.mFront, glm::normalize(selectedCenter - cam.mPos), timer.mDelta * camSpeed);
 				//cam.mFront = glm::lerp(cam.mFront, scene->mSelected->mFront, timer.mDelta * camSpeed);
 			}
 		}
