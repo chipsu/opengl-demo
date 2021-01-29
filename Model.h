@@ -26,7 +26,8 @@ struct Model {
 		mAABB = aabb;
 	}
 	bool HasAnimations() const {
-		return nullptr != mAnimationSet && mAnimationSet->mAnimations.size() > 0;
+		// FIXME
+		return nullptr != mAnimationController && mAnimationController->mAnimationSet->mAnimations.size() > 0;
 	}
 };
 typedef std::shared_ptr<Model> Model_;

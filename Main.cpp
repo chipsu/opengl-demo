@@ -254,8 +254,10 @@ int main(const int argc, const char **argv) {
 				// FIXME
 				if (selectedWeights.size() != ac->GetAnimationCount()) {
 					selectedWeights.resize(ac->GetAnimationCount());
-					std::fill(selectedWeights.begin(), selectedWeights.end(), 0);
-					selectedWeights[0] = 1.0f;
+					if (!selectedWeights.empty()) {
+						std::fill(selectedWeights.begin(), selectedWeights.end(), 0);
+						selectedWeights[0] = 1.0f;
+					}
 				}
 
 				size_t animIndex = 0;
@@ -280,7 +282,7 @@ int main(const int argc, const char **argv) {
 			const auto& model = entity->mModel;
 			if (!model) continue;
 			if (model->HasAnimations()) {
-				const auto& bones = useBlender ? model->mAnimationController->mBlendedTransforms : model->mAnimationController->mFinalTransforms;
+				const auto& bones = model->mAnimationController->mFinalTransforms;
 				glUniformMatrix4fv(uniformBones, bones.size(), GL_FALSE, (GLfloat*)&bones[0]);
 			}
 			glm::mat4 transform = glm::translate(glm::identity<glm::mat4>(), entity->mPos);
