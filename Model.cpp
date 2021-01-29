@@ -29,33 +29,6 @@ glm::mat4 FindGlobalInverseTransform(const aiScene* scene) {
     return transform;
 }
 
-void ValidateMesh(Mesh_ mesh, AnimationController_ animationController) {
-    assert(mesh->mIndices.size() > 0);
-    for (size_t i = 0; i < mesh->mIndices.size(); ++i) {
-        assert(mesh->mIndices[i] < mesh->mVertices.size());
-    }
-
-    assert(mesh->mVertices.size() > 0);
-    for (size_t i = 0; i < mesh->mVertices.size(); ++i) {
-        const Vertex& vertex = mesh->mVertices[i];
-
-        assert(fabs(vertex.mPos.x) < 9999.0f);
-        assert(fabs(vertex.mPos.y) < 9999.0f);
-        assert(fabs(vertex.mPos.z) < 9999.0f);
-
-        if (nullptr != animationController) {
-            float weightTotal = 0.0f;
-            assert(vertex.mBoneWeights[0] > 0.0f);
-            for (int j = 0; j < MAX_VERTEX_WEIGHTS; ++j) {
-                weightTotal += vertex.mBoneWeights[j];
-                assert(vertex.mBoneIndices[j] < animationController->mBoneMappings.size());
-            }
-            //float weightDiff = fabs(1.0f - weightTotal);
-            //assert(weightDiff < 0.1f);
-        }
-    }
-}
-
 void LoadBoneWeights(Model* model, Mesh_ mesh, const aiMesh* nodeMesh) {
     size_t numUnmappedWeights = 0;
     for (unsigned int boneIndex = 0; boneIndex < nodeMesh->mNumBones; ++boneIndex) {
@@ -63,7 +36,7 @@ void LoadBoneWeights(Model* model, Mesh_ mesh, const aiMesh* nodeMesh) {
         for (unsigned int weightIndex = 0; weightIndex < bone->mNumWeights; ++weightIndex) {
             const auto boneWeight = bone->mWeights[weightIndex];
             assert(boneWeight.mVertexId < mesh->mVertices.size());
-            const auto boneID = model->mAnimationController->MapBone(bone->mName.data, make_mat4(bone->mOffsetMatrix));
+            const auto boneID = model->mAnimationSet->MapBone(bone->mName.data, make_mat4(bone->mOffsetMatrix));
             if (!mesh->mVertices[boneWeight.mVertexId].AddBoneWeight(boneID, boneWeight.mWeight)) {
                 numUnmappedWeights++;
             }
@@ -121,8 +94,6 @@ void LoadNode(Model* model, const aiScene* scene, const aiNode* node) {
             LoadBoneWeights(model, mesh, nodeMesh);
         }
 
-        //ValidateMesh(mesh, model->mAnimationController);
-
         model->mMeshes.push_back(mesh);
     }
 
@@ -146,9 +117,10 @@ void LoadAnimations(Model* model, const aiScene* scene) {
     //if (scene->mNumAnimations < 1) return;
 
     // FIXME: Store elsewhere?
-    if (!model->mAnimationController) {
-        model->mAnimationController = std::make_shared<AnimationController>();
-        model->mAnimationController->mGlobalInverseTransform = FindGlobalInverseTransform(scene); // FIXME
+    if (!model->mAnimationSet) {
+        model->mAnimationSet = std::make_shared<AnimationSet>();
+        model->mAnimationSet->mGlobalInverseTransform = FindGlobalInverseTransform(scene); // FIXME
+        model->mAnimationController = std::make_shared<AnimationController>(model->mAnimationSet); // FIXME
     }
 
     for (unsigned int animationIndex = 0; animationIndex < scene->mNumAnimations; ++animationIndex) {
@@ -182,7 +154,7 @@ void LoadAnimations(Model* model, const aiScene* scene) {
             animation->mAnimationTracks.push_back(track);
         }
 
-        model->mAnimationController->mAnimations.push_back(animation);
+        model->mAnimationSet->mAnimations.push_back(animation);
     }
 }
 
@@ -199,7 +171,7 @@ const aiScene* LoadScene(const std::string& fileName) {
 void Model::Load(const std::string& fileName) {
     const auto scene = LoadScene(fileName);
     mMeshes.clear();
-    mAnimationController.reset();
+    mAnimationSet.reset();
     LoadAnimations(this, scene);
     LoadNode(this, scene, scene->mRootNode);
     aiReleaseImport(scene);
@@ -209,7 +181,7 @@ void Model::Load(const std::string& fileName) {
 void Model::LoadAnimation(const std::string& fileName, bool append) {
     const auto scene = LoadScene(fileName);
     if (!append) {
-        mAnimationController.reset();
+        mAnimationSet.reset();
     }
     LoadAnimations(this, scene);
 }

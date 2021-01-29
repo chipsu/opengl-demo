@@ -7,6 +7,7 @@
 
 struct Model {
 	std::vector<Mesh_> mMeshes;
+	AnimationSet_ mAnimationSet;
 	AnimationController_ mAnimationController;
 	AABB mAABB;
 	void Update(float absoluteTime, float deltaTime) {
@@ -25,7 +26,7 @@ struct Model {
 		mAABB = aabb;
 	}
 	bool HasAnimations() const {
-		return nullptr != mAnimationController && mAnimationController->mAnimations.size() > 0;
+		return nullptr != mAnimationSet && mAnimationSet->mAnimations.size() > 0;
 	}
 };
 typedef std::shared_ptr<Model> Model_;

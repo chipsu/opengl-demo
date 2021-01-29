@@ -122,17 +122,12 @@ struct Animation {
 };
 typedef std::shared_ptr<Animation> Animation_;
 
-struct AnimationController {
+// TODO: naming idk
+struct AnimationSet {
 	std::vector<Animation_> mAnimations;
-	size_t mAnimationIndex = -1;
 	std::map<std::string, uint32_t> mBoneMappings;
 	std::vector<glm::mat4> mBoneOffsets;
-	std::vector<glm::mat4> mFinalTransforms;
 	glm::mat4 mGlobalInverseTransform;
-
-	AnimationController() {
-		//MapBone("___NULL___", glm::identity<glm::mat4>());
-	}
 
 	size_t GetAnimationIndex(const std::string& name) const {
 		for (size_t i = 0; i < mAnimations.size(); ++i) {
@@ -141,6 +136,51 @@ struct AnimationController {
 			}
 		}
 		return -1;
+	}
+
+	uint32_t MapBone(const std::string& name, const glm::mat4& boneOffset) {
+		const auto it = mBoneMappings.find(name);
+		if (it != mBoneMappings.end()) {
+			return it->second;
+		}
+		const uint32_t id = mBoneMappings.size();
+		mBoneMappings[name] = id;
+		mBoneOffsets.resize(mBoneMappings.size());
+		mBoneOffsets[id] = boneOffset;
+		//std::cout << "Bone " << name << " mapped to " << id << std::endl;
+		return id;
+	}
+
+	void ReadNodeHierarchy(std::vector<glm::mat4>& finalTransforms, size_t index, float absoluteTime) {
+		const auto& animation = mAnimations[index];
+		const auto animationTime = animation->GetAnimationTime(absoluteTime);
+		ReadNodeHierarchy(finalTransforms, animation, animationTime, animation->mRootNode, mGlobalInverseTransform);
+	}
+
+	void ReadNodeHierarchy(std::vector<glm::mat4>& finalTransforms, Animation_ animation, const float time, const AnimationNode_ node, const glm::mat4 parentTransform) {
+		const auto nodeTransform = animation->GetNodeTransform(time, node);
+		const auto combinedTransform = parentTransform * nodeTransform;
+
+		const auto it = mBoneMappings.find(node->mName); // TODO: node->mBoneIndex?
+		if (it != mBoneMappings.end()) {
+			const auto boneIndex = it->second;
+			finalTransforms[boneIndex] = combinedTransform * mBoneOffsets[boneIndex];
+		}
+
+		for (auto& childNode : node->mChildren) {
+			ReadNodeHierarchy(finalTransforms, animation, time, childNode, combinedTransform);
+		}
+	}
+};
+typedef std::shared_ptr<AnimationSet> AnimationSet_;
+
+struct AnimationController {
+	AnimationSet_ mAnimationSet;
+	size_t mAnimationIndex = -1;
+	std::vector<glm::mat4> mFinalTransforms;
+
+	AnimationController(AnimationSet_ animationSet) {
+		mAnimationSet = animationSet;
 	}
 
 	/*
@@ -174,26 +214,27 @@ struct AnimationController {
 		return mAnimationIndex;
 	}
 	size_t GetAnimationCount() const {
-		return mAnimations.size();
+		return mAnimationSet->mAnimations.size();
 	}
 	bool GetAnimationEnabled() const {
-		return mAnimationIndex < mAnimations.size();
+		return mAnimationIndex < GetAnimationCount();
 	}
 	Animation_ GetAnimation() const {
-		return mAnimationIndex < mAnimations.size() ? mAnimations[mAnimationIndex] : nullptr;
+		return mAnimationIndex < GetAnimationCount() ? mAnimationSet->mAnimations[mAnimationIndex] : nullptr;
 	}
 
 	void Update(float absoluteTime) {
 		if (!GetAnimationEnabled()) {
 			return;
 		}
+		mFinalTransforms.resize(mAnimationSet->mBoneMappings.size()); // FIXME
 		ReadNodeHierarchy(mAnimationIndex, absoluteTime);
 	}
 
 	std::vector<glm::mat4> mBlendedTransforms;
 
 	void UpdateBlended(float absoluteTime) {
-		mBlendedTransforms.resize(mFinalTransforms.size()); // FIXME
+		mBlendedTransforms.resize(mAnimationSet->mBoneMappings.size()); // FIXME
 		std::fill(mBlendedTransforms.begin(), mBlendedTransforms.end(), glm::zero<glm::mat4>());
 
 		for (const auto& it : mBlendMap) {
@@ -206,39 +247,8 @@ struct AnimationController {
 		}
 	}
 
-	uint32_t MapBone(const std::string& name, const glm::mat4& boneOffset) {
-		const auto it = mBoneMappings.find(name);
-		if (it != mBoneMappings.end()) {
-			return it->second;
-		}
-		const uint32_t id = mBoneMappings.size();
-		mBoneMappings[name] = id;
-		mBoneOffsets.resize(mBoneMappings.size());
-		mFinalTransforms.resize(mBoneMappings.size());
-		mBoneOffsets[id] = boneOffset;
-		//std::cout << "Bone " << name << " mapped to " << id << std::endl;
-		return id;
-	}
-
 	void ReadNodeHierarchy(size_t index, float absoluteTime) {
-		const auto& animation = mAnimations[index];
-		const auto animationTime = animation->GetAnimationTime(absoluteTime);
-		ReadNodeHierarchy(animation, animationTime, animation->mRootNode, mGlobalInverseTransform);
-	}
-
-	void ReadNodeHierarchy(Animation_ animation, const float time, const AnimationNode_ node, const glm::mat4 parentTransform) {
-		const auto nodeTransform = animation->GetNodeTransform(time, node);
-		const auto combinedTransform = parentTransform * nodeTransform;
-		
-		const auto it = mBoneMappings.find(node->mName); // TODO: node->mBoneIndex?
-		if (it != mBoneMappings.end()) {
-			const auto boneIndex = it->second;
-			mFinalTransforms[boneIndex] = combinedTransform * mBoneOffsets[boneIndex];
-		}
-
-		for(auto& childNode : node->mChildren) {
-			ReadNodeHierarchy(animation, time, childNode, combinedTransform);
-		}
+		mAnimationSet->ReadNodeHierarchy(mFinalTransforms, index, absoluteTime);
 	}
 };
 typedef std::shared_ptr<AnimationController> AnimationController_;

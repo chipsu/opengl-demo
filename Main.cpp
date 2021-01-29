@@ -237,11 +237,12 @@ int main(const int argc, const char **argv) {
 
 		if (selectedModel && selectedModel->mAnimationController) {
 			const auto ac = selectedModel->mAnimationController;
+			const auto as = ac->mAnimationSet;
 			ImGui::Begin(ac->GetAnimationEnabled() ? ac->GetAnimation()->mName.c_str() : "Animations");
 
 			ImGui::Checkbox("Animation info", &animDetails);
 			if (animDetails) {
-				for (const auto& anim : ac->mAnimations) {
+				for (const auto& anim : as->mAnimations) {
 					ImGui::Text("Animation: %s, %f", anim->mName.c_str(), anim->mDuration);
 				}
 			}
@@ -258,7 +259,7 @@ int main(const int argc, const char **argv) {
 				}
 
 				size_t animIndex = 0;
-				for (const auto& anim : ac->mAnimations) {
+				for (const auto& anim : as->mAnimations) {
 					ImGui::SliderFloat(("#" + std::to_string(animIndex) + " " + anim->mName).c_str(), &selectedWeights[animIndex], 0.0f, 1.0f);
 					ac->BlendAnimation(animIndex, selectedWeights[animIndex]);
 					animIndex++;
