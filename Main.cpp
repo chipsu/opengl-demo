@@ -135,15 +135,15 @@ int main(const int argc, const char **argv) {
 	const GLuint uLightPos = glGetUniformLocation(program->mID, "uLightPos");
 	const GLuint uViewPos = glGetUniformLocation(program->mID, "uViewPos");
 	const GLuint uLightColor = glGetUniformLocation(program->mID, "uLightColor");
-
-	glUniform3f(uLightPos, 100.0f, 100.0f, 100.0f);
-	glUniform3f(uLightColor, 1, 1, 1);
 	
 	bool useBlender = false;
 	bool animDetails = false;
 	bool meshDetails = false;
 
 	std::vector<float> selectedWeights;
+
+	glm::vec3 lightPos = { 100.0f, 100.0f, 100.0f };
+	glm::vec3 lightColor = { 1.0f, 1.0f, 1.0f };
 
 	Camera cam;
 	cam.SetAspect(windowWidth, windowHeight);
@@ -189,8 +189,7 @@ int main(const int argc, const char **argv) {
 			if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
 				cam.Crounch();*/
 
-			auto selectedCenter = scene->mSelected->mPos;
-			selectedCenter.z += scene->mSelected->mModel->mAABB.mHalfSize.z; // FIXME
+			auto selectedCenter = scene->mSelected->mPos + scene->mSelected->mUp * scene->mSelected->mModel->mAABB.mHalfSize.z;
 			const auto camOffset = selectedCenter + scene->mSelected->mFront * -scene->mCameraDistance;
 			const auto camCenter = selectedCenter;
 			const auto rotX = glm::rotate(glm::identity<glm::mat4>(), scene->mCameraRotationX, cam.mUp);
@@ -273,6 +272,8 @@ int main(const int argc, const char **argv) {
 		glUniformMatrix4fv(uniformProj, 1, GL_FALSE, (GLfloat*)&cam.mProjection[0]);
 		glUniformMatrix4fv(uniformView, 1, GL_FALSE, (GLfloat*)&cam.mView[0]);
 		glUniform3fv(uViewPos, 1, (GLfloat*)&cam.mPos[0]);
+		glUniform3fv(uLightPos, 1, (GLfloat*)&lightPos[0]);
+		glUniform3fv(uLightColor, 1, (GLfloat*)&lightColor[0]);
 
 		for (auto& entity : scene->mEntities) {
 			const auto& model = entity->mModel;
