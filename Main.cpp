@@ -137,6 +137,7 @@ int main(const int argc, const char **argv) {
 	const GLuint uLightColor = glGetUniformLocation(program->mID, "uLightColor");
 	
 	bool useBlender = false;
+	bool autoBlend = false;
 	bool animDetails = false;
 	bool meshDetails = false;
 
@@ -250,7 +251,8 @@ int main(const int argc, const char **argv) {
 			ImGui::Checkbox("Blend", &useBlender);
 
 			if (useBlender) {
-				ac->UpdateBlended(timer.mNow); // FIXME
+				ImGui::Checkbox("autoBlend", &autoBlend);
+
 				// FIXME
 				if (selectedWeights.size() != ac->GetAnimationCount()) {
 					selectedWeights.resize(ac->GetAnimationCount());
@@ -260,12 +262,35 @@ int main(const int argc, const char **argv) {
 					}
 				}
 
+				// FIXME
+				if (autoBlend) {
+					const auto animIdle = "CharacterArmature|Idle";
+					const auto animWalk = "CharacterArmature|Walk";
+					const auto animIdleIndex = as->GetAnimationIndex(animIdle);
+					const auto animWalkIndex = as->GetAnimationIndex(animWalk);
+					const float animFadeIn = 20.0f;
+					const float animFadeOut = 10.0f;
+
+					for (auto& w : selectedWeights) {
+						w = glm::clamp(w - timer.mDelta * animFadeOut, 0.0f, 1.0f);
+					}
+
+					// TODO: Move to ? & use velocity to choose animation
+					if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+						selectedWeights[animWalkIndex] = glm::clamp(selectedWeights[animWalkIndex] + timer.mDelta * animFadeIn, 0.0f, 1.0f);
+					} else {
+						selectedWeights[animIdleIndex] = glm::clamp(selectedWeights[animIdleIndex] + timer.mDelta * animFadeIn, 0.0f, 1.0f);
+					}
+				}
+
 				size_t animIndex = 0;
 				for (const auto& anim : as->mAnimations) {
 					ImGui::SliderFloat(("#" + std::to_string(animIndex) + " " + anim->mName).c_str(), &selectedWeights[animIndex], 0.0f, 1.0f);
 					ac->BlendAnimation(animIndex, selectedWeights[animIndex]);
 					animIndex++;
 				}
+
+				ac->UpdateBlended(timer.mNow); // FIXME
 			}
 
 			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);

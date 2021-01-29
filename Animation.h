@@ -182,6 +182,12 @@ struct AnimationController {
 		assert(index != -1);
 		mBlendMap[index] = weight;
 	}
+
+	void BlendAnimation(const std::string& name, const float weight) {
+		const auto index = mAnimationSet->GetAnimationIndex(name);
+		BlendAnimation(index, weight);
+	}
+
 	/*void BlendAnimation(const size_t index, const float weight, const size_t iterations) {
 	}
 	void BlendAnimation(const size_t index, const float weight, const float duration) {
