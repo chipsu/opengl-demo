@@ -10,10 +10,17 @@ void Scene::Load(const std::string& fileName) {
 		if (cfg.HasMember("disabled") && cfg["disabled"].GetBool()) continue;
 		auto model = std::make_shared<Model>();
 		auto entity = std::make_shared<Entity>(model);
-		model->Load(cfg["model"].GetString());
+		ModelOptions modelOptions;
+		if (cfg.HasMember("modelOptions")) {
+			const auto& opts = cfg["modelOptions"].GetObject();
+			if (opts.HasMember("scale")) {
+				modelOptions.mScale = opts["scale"].GetFloat();
+			}
+		}
+		model->Load(cfg["model"].GetString(), modelOptions);
 		if (cfg.HasMember("animations")) {
 			for (const auto& anim : cfg["animations"].GetArray()) {
-				model->LoadAnimation(anim.GetString(), true);
+				model->LoadAnimation(anim.GetString(), modelOptions, true);
 			}
 		}
 		if (cfg.HasMember("position")) {

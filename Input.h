@@ -34,28 +34,28 @@ struct Input {
 	}
 
 	void SetDebugMesh(Entity_ entity, size_t index) {
-		auto& meshes = entity->mModel->mMeshes;
-		mDebugMesh = index;
+		//auto& meshes = entity->mModel->mMeshes;
+		//mDebugMesh = index;
 
-		if (mDebugMesh >= meshes.size()) {
-			mDebugMesh = -1;
-		}
+		//if (mDebugMesh >= meshes.size()) {
+		//	mDebugMesh = -1;
+		//}
 
-		if (mDebugMesh == -1) {
-			std::cout << "DEBUG: Show all meshes" << std::endl;
-			for (auto& mesh : meshes) {
-				mesh->mHidden = false;
-			}
-			//mScene->mCameraCenter = entity->mModel->mAABB.mCenter; // TODO OFFSET
-		}
-		else {
-			std::cout << "DEBUG: Show mesh " << mDebugMesh << std::endl;
-			for (auto& mesh : meshes) {
-				mesh->mHidden = true;
-			}
-			meshes[mDebugMesh]->mHidden = false;
-			//mScene->mCameraCenter = meshes[mDebugMesh]->mAABB.mCenter; // TODO OFFSET
-		}
+		//if (mDebugMesh == -1) {
+		//	std::cout << "DEBUG: Show all meshes" << std::endl;
+		//	for (auto& mesh : meshes) {
+		//		mesh->mHidden = false;
+		//	}
+		//	//mScene->mCameraCenter = entity->mModel->mAABB.mCenter; // TODO OFFSET
+		//}
+		//else {
+		//	std::cout << "DEBUG: Show mesh " << mDebugMesh << std::endl;
+		//	for (auto& mesh : meshes) {
+		//		mesh->mHidden = true;
+		//	}
+		//	meshes[mDebugMesh]->mHidden = false;
+		//	//mScene->mCameraCenter = meshes[mDebugMesh]->mAABB.mCenter; // TODO OFFSET
+		//}
 	}
 
 	void OnKey(GLFWwindow* window, int key, int scancode, int action, int mods) {
@@ -112,6 +112,6 @@ struct Input {
 		const float scale = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ? 10.0f : 1.0f;
 		mScene->mCameraDistance -= (float)yoffset * scale;
 		mScene->mCameraDistance = glm::clamp(mScene->mCameraDistance, 1.0f, 1000.0f);
-		//printf("SCROLL: %f\n", mScene->mCameraDistance);
+		printf("SCROLL: %f\n", mScene->mCameraDistance);
 	}
 };

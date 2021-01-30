@@ -20,9 +20,16 @@ const aiNode* FindMeshRoot(const aiNode* node) {
     return nullptr;
 }
 
+glm::mat4 GetNodeTransform(const aiNode* node) {
+    if (node->mParent) {
+        return GetNodeTransform(node->mParent) * make_mat4(node->mTransformation);
+    }
+    return make_mat4(node->mTransformation);
+}
+
 glm::mat4 FindGlobalInverseTransform(const aiScene* scene) {
     const auto node = FindMeshRoot(scene->mRootNode);
-    auto transform = make_mat4(node ? node->mTransformation : scene->mRootNode->mTransformation);
+    auto transform = GetNodeTransform(node ? node : scene->mRootNode);
     transform = glm::inverse(transform);
     std::cout << "global inverse: " << glm::to_string(transform) << std::endl;
     std::cout << "From node: " << (node ? node->mName.data : scene->mRootNode->mName.data) << std::endl;
@@ -47,7 +54,9 @@ void LoadBoneWeights(Model* model, Mesh_ mesh, const aiMesh* nodeMesh) {
     }
 }
 
-void LoadNode(Model* model, const aiScene* scene, const aiNode* node) {
+ModelNode_ LoadNode(Model* model, const aiScene* scene, const aiNode* node, ModelNode_ parent = nullptr) {
+    ModelNode_ modelNode = std::make_shared<ModelNode>(node->mName.data, parent, make_mat4(node->mTransformation));
+
     for (unsigned int meshIndex = 0; meshIndex < node->mNumMeshes; ++meshIndex) {
         const auto nodeMesh = scene->mMeshes[node->mMeshes[meshIndex]]; // TODO: Shared meshes?
         auto mesh = std::make_shared<Mesh>();
@@ -90,16 +99,19 @@ void LoadNode(Model* model, const aiScene* scene, const aiNode* node) {
         }
 
         // FIXME
-        if (model->mAnimationController) {
+        if (model->mAnimationSet) {
             LoadBoneWeights(model, mesh, nodeMesh);
         }
 
-        model->mMeshes.push_back(mesh);
+        modelNode->mMeshes.push_back(mesh);
     }
 
     for (unsigned int childIndex = 0; childIndex < node->mNumChildren; ++childIndex) {
-        LoadNode(model, scene, node->mChildren[childIndex]);
+        auto childNode = LoadNode(model, scene, node->mChildren[childIndex], modelNode);
+        modelNode->mChildren.push_back(childNode);
     }
+
+    return modelNode;
 }
 
 AnimationNode_ LoadHierarchy(Model* model, const aiNode* node, AnimationNode_ parent = nullptr) {
@@ -158,28 +170,81 @@ void LoadAnimations(Model* model, const aiScene* scene) {
     }
 }
 
-const aiScene* LoadScene(const std::string& fileName) {
+std::string GetMetaDataString(const aiMetadataEntry& entry) {
+    switch (entry.mType) {
+    case AI_BOOL: return "(BOOL) " + std::to_string(*(bool*)entry.mData);
+    case AI_INT32: return "(INT32) " + std::to_string(*(int32_t*)entry.mData);
+    case AI_UINT64: return "(UINT64) " + std::to_string(*(uint64_t*)entry.mData);
+    case AI_FLOAT: return "(FLOAT) " + std::to_string(*(float*)entry.mData);
+    case AI_DOUBLE: return "(DOUBLE) " + std::to_string(*(double*)entry.mData);
+    case AI_AISTRING: {
+        const auto val = (aiString*)entry.mData;
+        return "(AISTRING) " + std::string(val->data);
+    }
+    case AI_AIVECTOR3D: {
+        const auto val = make_vec3(*(aiVector3D*)entry.mData);
+        return "(AIVECTOR3D) " + glm::to_string(val);
+    }
+    default:
+        return "(UNKNOWN)";
+    }
+}
+
+void FixSceneUpAxis(const aiScene* scene) {
+    int32_t upAxis, upAxisSign;
+    int32_t frontAxis, frontAxisSign;
+    int32_t coordAxis, coordAxisSign;
+    scene->mMetaData->Get("UpAxis", upAxis);
+    scene->mMetaData->Get("UpAxisSign", upAxisSign);
+    scene->mMetaData->Get("FrontAxis", frontAxis);
+    scene->mMetaData->Get("FrontAxisSign", frontAxisSign);
+    scene->mMetaData->Get("CoordAxis", coordAxis);
+    scene->mMetaData->Get("CoordAxisSign", coordAxisSign);
+    aiVector3D upVec = upAxis == 0 ? aiVector3D(upAxisSign, 0, 0) : upAxis == 1 ? aiVector3D(0, upAxisSign, 0) : aiVector3D(0, 0, upAxisSign);
+    aiVector3D forwardVec = frontAxis == 0 ? aiVector3D(frontAxisSign, 0, 0) : frontAxis == 1 ? aiVector3D(0, frontAxisSign, 0) : aiVector3D(0, 0, frontAxisSign);
+    aiVector3D rightVec = coordAxis == 0 ? aiVector3D(coordAxisSign, 0, 0) : coordAxis == 1 ? aiVector3D(0, coordAxisSign, 0) : aiVector3D(0, 0, coordAxisSign);
+    aiMatrix4x4 mat(
+        rightVec.x, rightVec.y, rightVec.z, 0.0f,
+        upVec.x, upVec.y, upVec.z, 0.0f,
+        forwardVec.x, forwardVec.y, forwardVec.z, 0.0f,
+        0.0f, 0.0f, 0.0f, 1.0f
+    );
+    scene->mRootNode->mTransformation = mat;
+}
+
+const aiScene* LoadScene(const std::string& fileName, const ModelOptions& options) {
     // FIXME: config
-    auto target = aiProcess_CalcTangentSpace | aiProcess_JoinIdenticalVertices | aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_LimitBoneWeights;
-    auto scene = aiImportFile(fileName.c_str(), target);
+    auto props = aiCreatePropertyStore();
+    //aiSetImportPropertyFloat(props, AI_CONFIG_GLOBAL_SCALE_FACTOR_KEY, options.mScale);
+    auto target = /*aiProcess_GlobalScale |*/ aiProcess_CalcTangentSpace | aiProcess_JoinIdenticalVertices | aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_LimitBoneWeights;
+    auto scene = aiImportFileExWithProperties(fileName.c_str(), target, nullptr, props);
+    aiReleasePropertyStore(props);
+    
     if (nullptr == scene) {
         throw new std::runtime_error(aiGetErrorString());
     }
+    if (scene->mMetaData) {
+        for (unsigned int i = 0; i < scene->mMetaData->mNumProperties; ++i) {
+            std::cout << scene->mMetaData->mKeys[i].data << "=" << GetMetaDataString(scene->mMetaData->mValues[i]) << std::endl;
+        }
+    }
+    scene->mRootNode->mTransformation.Scaling(aiVector3D(options.mScale, options.mScale, options.mScale), scene->mRootNode->mTransformation);
     return scene;
 }
 
-void Model::Load(const std::string& fileName) {
-    const auto scene = LoadScene(fileName);
-    mMeshes.clear();
+void Model::Load(const std::string& fileName, const ModelOptions& options) {
+    const auto scene = LoadScene(fileName, options);
+    mName = fileName;
+    mRootNode.reset();
     mAnimationSet.reset();
     LoadAnimations(this, scene);
-    LoadNode(this, scene, scene->mRootNode);
+    mRootNode = LoadNode(this, scene, scene->mRootNode);
     aiReleaseImport(scene);
     UpdateAABB();
 }
 
-void Model::LoadAnimation(const std::string& fileName, bool append) {
-    const auto scene = LoadScene(fileName);
+void Model::LoadAnimation(const std::string& fileName, const ModelOptions& options, bool append) {
+    const auto scene = LoadScene(fileName, options);
     if (!append) {
         mAnimationSet.reset();
     }

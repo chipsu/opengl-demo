@@ -15,7 +15,7 @@ Scene_ CreateScene(const int argc, const char** argv) {
 		
 		if (arg == "-s") {
 			scene->Load(argv[++i]);
-		} else if (arg == "-m") {
+		} /*else if (arg == "-m") {
 			loadModel = true;
 		} else if (arg == "-a") {
 			loadModel = false;
@@ -27,7 +27,7 @@ Scene_ CreateScene(const int argc, const char** argv) {
 			} else {
 				scene->mEntities.back()->mModel->LoadAnimation(arg, true);
 			}
-		}
+		}*/
 	}
 	for (const auto& entity : scene->mEntities) {
 		const auto& model = entity->mModel;
@@ -53,8 +53,8 @@ float get_deque(void* data, int idx) {
 
 struct Camera {
 	glm::vec3 mPos = { 0,0,0 };
-	glm::vec3 mFront = { 0,1,0 };
-	glm::vec3 mUp = { 0,0,1 };
+	glm::vec3 mFront = { 0,0,1 };
+	glm::vec3 mUp = { 0,1,0 };
 	glm::vec3 mLeft = { 1,0,0 };
 
 	float mFov = glm::radians(45.0f);
@@ -84,6 +84,19 @@ struct Camera {
 
 	void UpdateProjection() {
 		mProjection = glm::perspective(mFov, mAspect, mNear, mFar);
+	}
+};
+
+void RenderNode(GLint uniformModel, ModelNode_ node, const glm::mat4& parentTransform) {
+	glm::mat4 transform = parentTransform * node->mTransform;
+	for (auto& mesh : node->mMeshes) {
+		if (mesh->mHidden) continue;
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, (GLfloat*)&transform[0]);
+		mesh->Bind();
+		glDrawElements(GL_TRIANGLES, mesh->mIndices.size(), GL_UNSIGNED_INT, 0);
+	}
+	for (auto& childNode : node->mChildren) {
+		RenderNode(uniformModel, childNode, transform);
 	}
 };
 
@@ -139,7 +152,7 @@ int main(const int argc, const char **argv) {
 	bool useBlender = false;
 	bool autoBlend = false;
 	bool animDetails = false;
-	bool meshDetails = false;
+	bool modelDetails = true;
 
 	std::vector<float> selectedWeights;
 
@@ -175,7 +188,7 @@ int main(const int argc, const char **argv) {
 		}
 
 		if (nullptr != scene->mSelected) {
-			movementSpeed = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) ? 5.0f : 1.0f;
+			movementSpeed = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) ? 20.0f : 10.0f;
 
 			if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
 				scene->mSelected->Walk(timer.mDelta * movementSpeed);
@@ -190,7 +203,7 @@ int main(const int argc, const char **argv) {
 			if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
 				cam.Crounch();*/
 
-			auto selectedCenter = scene->mSelected->mPos + scene->mSelected->mUp * scene->mSelected->mModel->mAABB.mHalfSize.z;
+			auto selectedCenter = scene->mSelected->mPos + scene->mSelected->mUp * scene->mSelected->mModel->mAABB.mHalfSize.y;
 			const auto camOffset = selectedCenter + scene->mSelected->mFront * -scene->mCameraDistance;
 			const auto camCenter = selectedCenter;
 			const auto rotX = glm::rotate(glm::identity<glm::mat4>(), scene->mCameraRotationX, cam.mUp);
@@ -218,13 +231,18 @@ int main(const int argc, const char **argv) {
 		//ImGui::ShowDemoWindow();
 		ImGui::PlotHistogram("FPS", get_deque, (void*)&fps.mHistory, fps.mHistory.size());
 
-
 		auto selectedModel = scene->mSelected ? scene->mSelected->mModel : nullptr;
 		if (selectedModel) {
-			ImGui::Checkbox("Model info", &meshDetails);
+			ImGui::Checkbox("Model info", &modelDetails);
 
-			if (meshDetails) {
-				for (const auto& mesh : selectedModel->mMeshes) {
+			if (modelDetails) {
+				ImGui::Text("Name: %s", selectedModel->mName.c_str());
+				ImGui::Text("Model: c=%s, s=%s | length=%f",
+					glm::to_string(selectedModel->mAABB.mCenter).c_str(),
+					glm::to_string(selectedModel->mAABB.mHalfSize).c_str(),
+					glm::length(selectedModel->mAABB.mHalfSize) * 2.0f
+				);
+				/*for (const auto& mesh : selectedModel->mMeshes) {
 					ImGui::Text("Mesh: h=%d, v=%d, i=%d, c=%s, s=%s",
 						mesh->mHidden,
 						mesh->mVertices.size(),
@@ -232,7 +250,7 @@ int main(const int argc, const char **argv) {
 						glm::to_string(mesh->mAABB.mCenter).c_str(),
 						glm::to_string(mesh->mAABB.mHalfSize).c_str()
 					);
-				}
+				}*/
 			}
 		}
 
@@ -248,8 +266,12 @@ int main(const int argc, const char **argv) {
 				}
 			}
 
-			ImGui::Checkbox("Blend", &useBlender);
+			//ac->mHeadRot = glm::quatLookAt(cam.mFront, { 0, 0, 1 });
+			double mx = 0;
+			glfwGetCursorPos(window, &mx, nullptr);
+			ac->mHeadRot = glm::rotate(glm::identity<glm::quat>(), (float)mx * 0.025f, { 0, 1, 0 });
 
+			ImGui::Checkbox("Blend", &useBlender);
 			if (useBlender) {
 				ImGui::Checkbox("autoBlend", &autoBlend);
 
@@ -297,6 +319,8 @@ int main(const int argc, const char **argv) {
 			ImGui::End();
 		}
 
+		//cam.mView = glm::lookAt(glm::vec3(0, 50, 50), { 0, 0, 0 }, { 0, 1, 0 });
+
 		glUniformMatrix4fv(uniformProj, 1, GL_FALSE, (GLfloat*)&cam.mProjection[0]);
 		glUniformMatrix4fv(uniformView, 1, GL_FALSE, (GLfloat*)&cam.mView[0]);
 		glUniform3fv(uViewPos, 1, (GLfloat*)&cam.mPos[0]);
@@ -313,12 +337,7 @@ int main(const int argc, const char **argv) {
 			glm::mat4 transform = glm::translate(glm::identity<glm::mat4>(), entity->mPos);
 			transform *= glm::mat4_cast(entity->mRot);
 			transform = glm::scale(transform, entity->mScale);
-			glUniformMatrix4fv(uniformModel, 1, GL_FALSE, (GLfloat*)&transform[0]);
-			for (auto& mesh : model->mMeshes) {
-				if (mesh->mHidden) continue;
-				mesh->Bind();
-				glDrawElements(GL_TRIANGLES, mesh->mIndices.size(), GL_UNSIGNED_INT, 0);
-			}
+			RenderNode(uniformModel, model->mRootNode, transform);
 		}
 
 		ui->Render();

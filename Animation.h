@@ -85,6 +85,12 @@ struct AnimationNode {
 	AnimationNode(const std::string& name, AnimationNode_ parent, const glm::mat4& transform) : mName(name), mParent(parent), mTransform(transform) {
 	}
 
+	void Recurse(std::function<void(AnimationNode& node)> callback) {
+		callback(*this);
+		for (auto& child : mChildren) {
+			child->Recurse(callback);
+		}
+	}
 };
 typedef AnimationNode::AnimationNode_ AnimationNode_;
 
@@ -118,7 +124,6 @@ struct Animation {
 		const float ticks = time * tps;
 		return fmod(ticks, mDuration);
 	}
-
 };
 typedef std::shared_ptr<Animation> Animation_;
 
@@ -254,7 +259,15 @@ struct AnimationController {
 		}
 	}
 
+	glm::quat mHeadRot = glm::identity<glm::quat>(); // FIXME
+
 	virtual glm::mat4 GetNodeTransform(Animation_ animation, float time, const AnimationNode_ node) {
+		// FIXME: Temp test
+		if (node->mName == "Head") {
+			glm::mat4 head = glm::toMat4(mHeadRot);
+			return animation->GetNodeTransform(time, node) * head;
+		}
+		//std::cout << node->mName << std::endl;
 		return animation->GetNodeTransform(time, node);
 	}
 };
