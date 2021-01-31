@@ -228,7 +228,7 @@ const aiScene* LoadScene(const std::string& fileName, const ModelOptions& option
             std::cout << scene->mMetaData->mKeys[i].data << "=" << GetMetaDataString(scene->mMetaData->mValues[i]) << std::endl;
         }
     }
-    scene->mRootNode->mTransformation.Scaling(aiVector3D(options.mScale, options.mScale, options.mScale), scene->mRootNode->mTransformation);
+    scene->mRootNode->mTransformation.Scaling(aiVector3D(options.mScale, options.mScale, options.mScale), scene->mRootNode->mTransformation); // FIXME
     return scene;
 }
 

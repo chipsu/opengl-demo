@@ -16,13 +16,12 @@ struct ModelNode {
 	ModelNode(const std::string& name, ModelNode_ parent, const glm::mat4& transform) : mName(name), mParent(parent), mTransform(transform) {
 	}
 
-	void Recurse(std::function<void(ModelNode &node)> callback) {
+	void Recurse(std::function<void(ModelNode& node)> callback) {
 		callback(*this);
 		for (auto& child : mChildren) {
 			child->Recurse(callback);
 		}
 	}
-
 };
 typedef ModelNode::ModelNode_ ModelNode_;
 
@@ -46,6 +45,7 @@ struct Model {
 	void UpdateAABB() {
 		AABB aabb;
 		glm::mat4 transform = glm::identity<glm::mat4>();
+		// FIXME idk about this
 		mRootNode->Recurse([&aabb, &transform](ModelNode& node) {
 			transform = transform * node.mTransform;
 			glm::vec4 pos = transform * glm::vec4(0, 0, 0, 1);
