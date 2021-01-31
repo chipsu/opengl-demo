@@ -1,10 +1,12 @@
 #include "Scene.h"
 
+using namespace rapidjson;
+
 void Scene::Load(const std::string& fileName) {
 	rapidjson::Document config;
 	std::ifstream ifs(fileName);
 	rapidjson::IStreamWrapper isw(ifs);
-	config.ParseStream(isw);
+	config.ParseStream<kParseDefaultFlags | kParseCommentsFlag | kParseTrailingCommasFlag>(isw);
 
 	for (const auto& cfg : config["entities"].GetArray()) {
 		if (cfg.HasMember("disabled") && cfg["disabled"].GetBool()) continue;
@@ -35,6 +37,8 @@ void Scene::Load(const std::string& fileName) {
 			const auto& pos = cfg["scale"].GetArray();
 			entity->mScale = { pos[0].GetFloat(), pos[1].GetFloat(), pos[2].GetFloat() };
 		}
+		entity->mControllable = cfg.HasMember("controllable") && cfg["controllable"].GetBool();
+		entity->mUseGravity = cfg.HasMember("useGravity") && cfg["useGravity"].GetBool();
 		mEntities.push_back(entity);
 	}
 }

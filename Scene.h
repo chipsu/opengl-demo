@@ -11,7 +11,10 @@ struct Entity {
 	glm::quat mRot = { 1,0,0,0 };
 	glm::vec3 mScale = { 1,1,1 };
 	AnimationController_ mAnimationController;
+	bool mControllable = false;
 	bool mUseGravity = false;
+	glm::vec3 mVelocity = { 0,0,0 };
+	glm::vec3 mGravity = { 0, -200.0f, 0 };
 	Entity() {}
 	Entity(Model_ model) : mModel(model) {}
 	Entity(Model_ model, const glm::vec3& pos) : mModel(model), mPos(pos) {}
@@ -24,8 +27,10 @@ struct Entity {
 		if (mAnimationController) {
 			mAnimationController->Update(absoluteTime);
 		}
+		mPos += mVelocity * deltaTime;
 		if (mUseGravity) {
-
+			mVelocity += mGravity * deltaTime;
+			if (mPos.y < 0) mPos.y = 0;
 		}
 	}
 
@@ -55,6 +60,7 @@ struct Scene {
 		for (auto& entity : mEntities) {
 			entity->Init();
 		}
+		SelectNext();
 	}
 
 	void Update(float absoluteTime, float deltaTime) {

@@ -185,18 +185,20 @@ int main(const int argc, const char **argv) {
 		if (nullptr != scene->mSelected) {
 			movementSpeed = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) ? 20.0f : 10.0f;
 
-			if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+			if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
 				scene->mSelected->Walk(timer.mDelta * movementSpeed);
+				// TODO: Rotate entity towards camera front perpendicular to ground plane (if rotating with MB2)
+			}
 			if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
 				scene->mSelected->Walk(timer.mDelta * -movementSpeed);
 			if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
 				scene->mSelected->Strafe(timer.mDelta * -movementSpeed);
 			if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
 				scene->mSelected->Strafe(timer.mDelta * movementSpeed);
-			/*if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
-				cam.Jump();
-			if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
-				cam.Crounch();*/
+			if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && scene->mSelected->mPos.y < 1.0f)
+				scene->mSelected->mVelocity.y = 100.0f;
+			//if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+			//	cam.Crounch();
 
 			auto selectedCenter = scene->mSelected->mPos + scene->mSelected->mUp * scene->mSelected->mModel->mAABB.mHalfSize.y;
 			const auto camOffset = selectedCenter + scene->mSelected->mFront * -scene->mCameraDistance;
@@ -282,10 +284,9 @@ int main(const int argc, const char **argv) {
 
 				// FIXME
 				if (autoBlend) {
-					const auto animIdle = "CharacterArmature|Idle";
-					const auto animWalk = "CharacterArmature|Walk";
-					const auto animIdleIndex = as->GetAnimationIndex(animIdle);
-					const auto animWalkIndex = as->GetAnimationIndex(animWalk);
+					const auto animIdle = as->GetAnimationIndex("CharacterArmature|Idle");
+					const auto animWalk = as->GetAnimationIndex("CharacterArmature|Walk");
+					const auto animJump = as->GetAnimationIndex("CharacterArmature|Victory");
 					const float animFadeIn = 20.0f;
 					const float animFadeOut = 10.0f;
 
@@ -295,9 +296,13 @@ int main(const int argc, const char **argv) {
 
 					// TODO: Move to ? & use velocity to choose animation
 					if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-						selectedWeights[animWalkIndex] = glm::clamp(selectedWeights[animWalkIndex] + timer.mDelta * animFadeIn, 0.0f, 1.0f);
+						selectedWeights[animWalk] = glm::clamp(selectedWeights[animWalk] + timer.mDelta * animFadeIn, 0.0f, 1.0f);
 					} else {
-						selectedWeights[animIdleIndex] = glm::clamp(selectedWeights[animIdleIndex] + timer.mDelta * animFadeIn, 0.0f, 1.0f);
+						selectedWeights[animIdle] = glm::clamp(selectedWeights[animIdle] + timer.mDelta * animFadeIn, 0.0f, 1.0f);
+					}
+
+					if (scene->mSelected->mPos.y > 1.0f) {
+						selectedWeights[animJump] = glm::clamp(selectedWeights[animJump] + timer.mDelta * animFadeIn, 0.0f, 1.0f);
 					}
 				}
 
