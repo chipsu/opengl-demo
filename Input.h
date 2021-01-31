@@ -63,7 +63,7 @@ struct Input {
 		if (action == GLFW_RELEASE) {
 			auto& entity = mScene->mSelected;
 			if (nullptr != entity) {
-				auto& animationController = entity->mModel->mAnimationController;
+				auto& animationController = entity->mAnimationController;
 				if (key == GLFW_KEY_LEFT) {
 					SetDebugMesh(entity, mDebugMesh - 1);
 				}

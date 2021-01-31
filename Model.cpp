@@ -126,13 +126,12 @@ AnimationNode_ LoadHierarchy(Model* model, const aiNode* node, AnimationNode_ pa
 }
 
 void LoadAnimations(Model* model, const aiScene* scene) {
-    //if (scene->mNumAnimations < 1) return;
+    if (scene->mNumAnimations < 1) return;
 
     // FIXME: Store elsewhere?
     if (!model->mAnimationSet) {
         model->mAnimationSet = std::make_shared<AnimationSet>();
         model->mAnimationSet->mGlobalInverseTransform = FindGlobalInverseTransform(scene); // FIXME
-        model->mAnimationController = std::make_shared<AnimationController>(model->mAnimationSet); // FIXME
     }
 
     for (unsigned int animationIndex = 0; animationIndex < scene->mNumAnimations; ++animationIndex) {

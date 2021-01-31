@@ -217,10 +217,10 @@ struct AnimationController {
 	}
 
 	void Update(float absoluteTime) {
+		mFinalTransforms.resize(mAnimationSet->mBoneMappings.size(), glm::identity<glm::mat4>()); // FIXME
 		if (!GetAnimationEnabled()) {
 			return;
 		}
-		mFinalTransforms.resize(mAnimationSet->mBoneMappings.size()); // FIXME
 		ReadNodeHierarchy(mFinalTransforms, mAnimationIndex, absoluteTime);
 	}
 

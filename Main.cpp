@@ -15,7 +15,7 @@ Scene_ CreateScene(const int argc, const char** argv) {
 		
 		if (arg == "-s") {
 			scene->Load(argv[++i]);
-		} /*else if (arg == "-m") {
+		} else if (arg == "-m") {
 			loadModel = true;
 		} else if (arg == "-a") {
 			loadModel = false;
@@ -27,14 +27,9 @@ Scene_ CreateScene(const int argc, const char** argv) {
 			} else {
 				scene->mEntities.back()->mModel->LoadAnimation(arg, true);
 			}
-		}*/
-	}
-	for (const auto& entity : scene->mEntities) {
-		const auto& model = entity->mModel;
-		if (model && model->mAnimationController && model->mAnimationController->GetAnimationCount()) {
-			model->mAnimationController->SetAnimationIndex(0);
 		}
 	}
+	scene->Init();
 	return scene;
 }
 
@@ -254,10 +249,11 @@ int main(const int argc, const char **argv) {
 			}
 		}
 
-		if (selectedModel && selectedModel->mAnimationController) {
-			const auto ac = selectedModel->mAnimationController;
+		if (scene->mSelected && scene->mSelected->mAnimationController) {
+			const auto ac = scene->mSelected->mAnimationController;
 			const auto as = ac->mAnimationSet;
-			ImGui::Begin(ac->GetAnimationEnabled() ? ac->GetAnimation()->mName.c_str() : "Animations");
+			ImGui::Begin("Animations");
+			ImGui::Text(ac->GetAnimationEnabled() ? ac->GetAnimation()->mName.c_str() : "DISABLED");
 
 			ImGui::Checkbox("Animation info", &animDetails);
 			if (animDetails) {
@@ -319,8 +315,6 @@ int main(const int argc, const char **argv) {
 			ImGui::End();
 		}
 
-		//cam.mView = glm::lookAt(glm::vec3(0, 50, 50), { 0, 0, 0 }, { 0, 1, 0 });
-
 		glUniformMatrix4fv(uniformProj, 1, GL_FALSE, (GLfloat*)&cam.mProjection[0]);
 		glUniformMatrix4fv(uniformView, 1, GL_FALSE, (GLfloat*)&cam.mView[0]);
 		glUniform3fv(uViewPos, 1, (GLfloat*)&cam.mPos[0]);
@@ -330,8 +324,8 @@ int main(const int argc, const char **argv) {
 		for (auto& entity : scene->mEntities) {
 			const auto& model = entity->mModel;
 			if (!model) continue;
-			if (model->HasAnimations()) {
-				const auto& bones = model->mAnimationController->mFinalTransforms;
+			if (entity->mAnimationController) {
+				const auto& bones = entity->mAnimationController->mFinalTransforms;
 				glUniformMatrix4fv(uniformBones, bones.size(), GL_FALSE, (GLfloat*)&bones[0]);
 			}
 			glm::mat4 transform = glm::translate(glm::identity<glm::mat4>(), entity->mPos);
