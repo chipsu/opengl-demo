@@ -41,6 +41,14 @@ ShaderProgram_ CreateShaderProgram() {
 	return std::make_shared<ShaderProgram>(shaders);
 }
 
+ShaderProgram_ CreateDebugShaderProgram() {
+	std::vector<Shader_> shaders;
+	shaders.push_back(std::make_shared<Shader>("debug.vert.glsl", GL_VERTEX_SHADER));
+	//shaders.push_back(std::make_shared<Shader>("debug.geom.glsl", GL_GEOMETRY_SHADER));
+	shaders.push_back(std::make_shared<Shader>("debug.frag.glsl", GL_FRAGMENT_SHADER));
+	return std::make_shared<ShaderProgram>(shaders);
+}
+
 float get_deque(void* data, int idx) {
 	auto deque = (std::deque<float>*)data;
 	return deque->at(idx);
@@ -95,6 +103,12 @@ void RenderNode(GLint uniformModel, ModelNode_ node, const glm::mat4& parentTran
 	}
 };
 
+struct DebugLine {
+	glm::vec3 mStart;
+	glm::vec3 mEnd;
+	glm::vec3 mColor;
+};
+
 int main(const int argc, const char **argv) {
 	if (!glfwInit()) {
 		std::cerr << "glfwInit failed" << std::endl;
@@ -132,9 +146,7 @@ int main(const int argc, const char **argv) {
 	auto ui = std::make_shared<UI>(window);
 
 	auto program = CreateShaderProgram();
-	glUseProgram(program->mID);
-
-	glEnable(GL_DEPTH_TEST);
+	auto debugProgram = CreateDebugShaderProgram();
 
 	const GLuint uniformProj = glGetUniformLocation(program->mID, "uProj");
 	const GLuint uniformView = glGetUniformLocation(program->mID, "uView");
@@ -148,11 +160,15 @@ int main(const int argc, const char **argv) {
 	bool autoBlend = false;
 	bool animDetails = false;
 	bool modelDetails = true;
+	bool enableDebug = true;
 
 	std::vector<float> selectedWeights;
 
 	glm::vec3 lightPos = { 100.0f, 100.0f, 100.0f };
 	glm::vec3 lightColor = { 1.0f, 1.0f, 1.0f };
+
+	std::vector<DebugLine> debugLines;
+	float debugVectorScale = 10.0f;
 
 	Camera cam;
 	cam.SetAspect(windowWidth, windowHeight);
@@ -175,6 +191,9 @@ int main(const int argc, const char **argv) {
 
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glEnable(GL_DEPTH_TEST);
+
+		glUseProgram(program->mID);
 
 		glfwPollEvents();
 
@@ -230,6 +249,7 @@ int main(const int argc, const char **argv) {
 
 		auto selectedModel = scene->mSelected ? scene->mSelected->mModel : nullptr;
 		if (selectedModel) {
+			ImGui::Checkbox("debug", &enableDebug);
 			ImGui::Checkbox("Model info", &modelDetails);
 
 			if (modelDetails) {
@@ -338,6 +358,31 @@ int main(const int argc, const char **argv) {
 			transform = glm::scale(transform, entity->mScale);
 			RenderNode(uniformModel, model->mRootNode, transform);
 		}
+
+		if (enableDebug) {
+			glDisable(GL_DEPTH_TEST);
+			glUseProgram(debugProgram->mID);
+			glUniformMatrix4fv(glGetUniformLocation(debugProgram->mID, "uProj"), 1, GL_FALSE, (GLfloat*)&cam.mProjection[0]);
+			glUniformMatrix4fv(glGetUniformLocation(debugProgram->mID, "uView"), 1, GL_FALSE, (GLfloat*)&cam.mView[0]);
+			for (auto& debugLine : debugLines) {
+				auto debugMesh = std::make_shared<Mesh>();
+				debugMesh->mIndices.push_back(0);
+				debugMesh->mIndices.push_back(1);
+				debugMesh->mVertices.push_back({
+					debugLine.mStart,
+					{},
+					debugLine.mColor
+					});
+				debugMesh->mVertices.push_back({
+					debugLine.mEnd,
+					{},
+					debugLine.mColor
+					});
+				debugMesh->Bind();
+				glDrawElements(GL_LINES, debugMesh->mIndices.size(), GL_UNSIGNED_INT, 0);
+			}
+		}
+		debugLines.clear();
 
 		ui->Render();
 	}
