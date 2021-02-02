@@ -58,7 +58,7 @@ struct Camera {
 	glm::vec3 mPos = { 0,0,0 };
 	glm::vec3 mFront = { 0,0,1 };
 	glm::vec3 mUp = { 0,1,0 };
-	glm::vec3 mLeft = { 1,0,0 };
+	glm::vec3 mRight;
 
 	float mFov = glm::radians(45.0f);
 	float mAspect = 1.0f;
@@ -161,6 +161,7 @@ int main(const int argc, const char **argv) {
 	bool animDetails = false;
 	bool modelDetails = true;
 	bool enableDebug = true;
+	bool headRot = false;
 
 	std::vector<float> selectedWeights;
 
@@ -168,9 +169,10 @@ int main(const int argc, const char **argv) {
 	glm::vec3 lightColor = { 1.0f, 1.0f, 1.0f };
 
 	std::vector<DebugLine> debugLines;
-	float debugVectorScale = 10.0f;
+	float debugLineScale = 10.0f;
 
 	Camera cam;
+	cam.mRight = glm::normalize(glm::cross(cam.mUp, cam.mFront));
 	cam.SetAspect(windowWidth, windowHeight);
 	float movementSpeed = 1.0f;
 	float camSpeed = 10.0f;
@@ -201,12 +203,24 @@ int main(const int argc, const char **argv) {
 			glfwSetWindowShouldClose(window, 1);
 		}
 
-		if (nullptr != scene->mSelected) {
-			movementSpeed = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) ? 20.0f : 10.0f;
+		auto selected = scene->mSelected;
+		if (nullptr != selected) {
+			movementSpeed = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) ? 100.0f : 40.0f;
 
 			if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+				auto targetFront = glm::cross(cam.mRight, selected->mUp);
+				targetFront = glm::normalize(targetFront);
+				selected->mFront = targetFront;
+				// FIXME
+				float turnSpeed = 10.0f;
+				selected->mRot = glm::slerp(selected->mRot, glm::quatLookAt(-targetFront, selected->mUp), timer.mDelta * turnSpeed);
+				//selected->mFront = selected->mDebugFront;
 				scene->mSelected->Walk(timer.mDelta * movementSpeed);
+
+				// SELECTED->mFront !?!?!?
 				// TODO: Rotate entity towards camera front perpendicular to ground plane (if rotating with MB2)
+
+				//selected->mFront = targetFront;
 			}
 			if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
 				scene->mSelected->Walk(timer.mDelta * -movementSpeed);
@@ -220,21 +234,40 @@ int main(const int argc, const char **argv) {
 			//	cam.Crounch();
 
 			auto selectedCenter = scene->mSelected->mPos + scene->mSelected->mUp * scene->mSelected->mModel->mAABB.mHalfSize.y;
-			const auto camOffset = selectedCenter + scene->mSelected->mFront * -scene->mCameraDistance;
-			const auto camCenter = selectedCenter;
-			const auto rotX = glm::rotate(glm::identity<glm::mat4>(), scene->mCameraRotationX, cam.mUp);
-			const auto rotY = glm::rotate(glm::identity<glm::mat4>(), scene->mCameraRotationY, cam.mLeft);
-			const auto posRot = rotX * rotY * glm::vec4(camOffset - camCenter, 1.0f);
-			const auto targetPos = glm::vec3(posRot) + camCenter;
 
-			if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_2) == GLFW_PRESS) {
-				cam.mPos = targetPos;
+			bool rot = false;
+			if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) { rot = true; scene->mCameraRotationX = -0.1f; }
+			if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {rot=true;scene->mCameraRotationX = 0.1f;}
+			if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {rot=true;scene->mCameraRotationY = 0.1f;
+}			if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {rot=true;scene->mCameraRotationY = -0.1f;}
+			
+			if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_2) == GLFW_PRESS ||rot) {
+				auto rotY = glm::angleAxis(scene->mCameraRotationX * timer.mDelta, glm::vec3(0, 1, 0));
+				auto rotX = glm::angleAxis(scene->mCameraRotationY * timer.mDelta, cam.mRight);
+				// TODO: limit X
+				auto targetPos2 = glm::normalize(rotY * rotX * cam.mFront);
+				targetPos2 = selectedCenter + targetPos2 * -scene->mCameraDistance;
+
+				// FIXME
+				scene->mCameraRotationX = 0;
+				scene->mCameraRotationY = 0;
+
+				cam.mPos = targetPos2;
+				debugLines.push_back({ selectedCenter , cam.mPos, {1,1,1} });
 				cam.mFront = glm::normalize(selectedCenter - cam.mPos);
+				cam.mRight = glm::normalize(glm::cross(cam.mUp, cam.mFront));
 			} else {
+				auto targetPos = selectedCenter + cam.mFront * -scene->mCameraDistance;
 				cam.mPos = glm::lerp(cam.mPos, targetPos, timer.mDelta * camSpeed);
-				cam.mFront = glm::lerp(cam.mFront, glm::normalize(selectedCenter - cam.mPos), timer.mDelta * camSpeed);
-				//cam.mFront = glm::lerp(cam.mFront, scene->mSelected->mFront, timer.mDelta * camSpeed);
+				cam.mFront = glm::lerp(cam.mFront, glm::normalize(selectedCenter - cam.mPos), timer.mDelta * camSpeed); // TODO norm
+				cam.mRight = glm::normalize(glm::cross(cam.mUp, cam.mFront));
 			}
+		}
+
+		if (enableDebug && selected) {
+			debugLines.push_back({ selected->mPos, selected->mPos + cam.mFront, { 1, 1, 1 } });
+			debugLines.push_back({ selected->mPos, selected->mPos + selected->mFront, { 1, 0, 0 } });
+			debugLines.push_back({ selected->mPos, selected->mPos + selected->mUp, { 0, 1, 0 } });
 		}
 
 		cam.UpdateView();
@@ -251,6 +284,8 @@ int main(const int argc, const char **argv) {
 		if (selectedModel) {
 			ImGui::Checkbox("debug", &enableDebug);
 			ImGui::Checkbox("Model info", &modelDetails);
+			ImGui::Text(std::to_string(scene->mCameraRotationX).c_str());
+			ImGui::Text(std::to_string(scene->mCameraRotationY).c_str());
 
 			if (modelDetails) {
 				ImGui::Text("Name: %s", selectedModel->mName.c_str());
@@ -284,10 +319,13 @@ int main(const int argc, const char **argv) {
 				}
 			}
 
-			//ac->mHeadRot = glm::quatLookAt(cam.mFront, { 0, 0, 1 });
-			double mx = 0;
-			glfwGetCursorPos(window, &mx, nullptr);
-			ac->mHeadRot = glm::rotate(glm::identity<glm::quat>(), (float)mx * 0.025f, { 0, 1, 0 });
+			ImGui::Checkbox("HeadRot", &headRot);
+			if (headRot) {
+				//ac->mHeadRot = glm::quatLookAt(cam.mFront, { 0, 0, 1 });
+				double mx = 0;
+				glfwGetCursorPos(window, &mx, nullptr);
+				ac->mHeadRot = glm::rotate(glm::identity<glm::quat>(), (float)mx * 0.025f, { 0, 1, 0 });
+			}
 
 			ImGui::Checkbox("Blend", &useBlender);
 			if (useBlender) {
@@ -374,7 +412,7 @@ int main(const int argc, const char **argv) {
 					debugLine.mColor
 					});
 				debugMesh->mVertices.push_back({
-					debugLine.mEnd,
+					debugLine.mEnd + (debugLine.mEnd - debugLine.mStart) * debugLineScale,
 					{},
 					debugLine.mColor
 					});

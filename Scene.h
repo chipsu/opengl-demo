@@ -10,6 +10,7 @@ struct Entity {
 	glm::vec3 mUp = { 0,1,0 };
 	glm::quat mRot = { 1,0,0,0 };
 	glm::vec3 mScale = { 1,1,1 };
+	glm::vec3 mDebugFront = { 0,0,1 };
 	AnimationController_ mAnimationController;
 	bool mControllable = false;
 	bool mUseGravity = false;
