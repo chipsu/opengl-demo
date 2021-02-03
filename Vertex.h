@@ -3,11 +3,11 @@
 #include "Main.h"
 
 struct Vertex {
-	glm::vec3 mPos = { 0, 0, 0 };
-	glm::vec3 mNormal = { 0, 0, 0 };
-	glm::vec3 mColor = { 0, 0, 0 };
-	float mBoneWeights[MAX_VERTEX_WEIGHTS] = { 0 };
-	uint32_t mBoneIndices[MAX_VERTEX_WEIGHTS] = { 0 };
+	alignas(16) glm::vec3 mPos = { 0, 0, 0 };
+	alignas(16) glm::vec3 mNormal = { 0, 0, 0 };
+	alignas(16) glm::vec3 mColor = { 0, 0, 0 };
+	alignas(16) float mBoneWeights[MAX_VERTEX_WEIGHTS] = { 0 };
+	alignas(16) uint32_t mBoneIndices[MAX_VERTEX_WEIGHTS] = { 0 };
 
 	bool AddBoneWeight(size_t index, float weight) {
 		for (size_t i = 0; i < MAX_VERTEX_WEIGHTS; ++i) {

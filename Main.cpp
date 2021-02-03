@@ -90,13 +90,20 @@ struct Camera {
 	}
 };
 
+size_t gMeshCounter = 0;
+
 void RenderNode(GLint uniformModel, ModelNode_ node, const glm::mat4& parentTransform) {
 	glm::mat4 transform = parentTransform * node->mTransform;
+	bool transformSet = false;
 	for (auto& mesh : node->mMeshes) {
 		if (mesh->mHidden) continue;
-		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, (GLfloat*)&transform[0]);
+		if (!transformSet) {
+			glUniformMatrix4fv(uniformModel, 1, GL_FALSE, (GLfloat*)&transform[0]);
+			transformSet = true;
+		}
 		mesh->Bind();
 		glDrawElements(GL_TRIANGLES, mesh->mIndices.size(), GL_UNSIGNED_INT, 0);
+		gMeshCounter++;
 	}
 	for (auto& childNode : node->mChildren) {
 		RenderNode(uniformModel, childNode, transform);
@@ -121,8 +128,11 @@ int main(const int argc, const char **argv) {
 	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 
 	const std::string windowTitle = "OpenGL Animation Demo";
+	
+	auto fullscreen = false;
 
-	auto window = glfwCreateWindow(1280, 720, windowTitle.c_str(), NULL, NULL);
+	auto monitor = fullscreen ? glfwGetPrimaryMonitor() : NULL;
+	auto window = glfwCreateWindow(1280, 720, windowTitle.c_str(), monitor, NULL);
 	if (!window) {
 		std::cerr << "glfwCreateWindow failed" << std::endl;
 		glfwTerminate();
@@ -384,6 +394,7 @@ int main(const int argc, const char **argv) {
 		glUniform3fv(uLightPos, 1, (GLfloat*)&lightPos[0]);
 		glUniform3fv(uLightColor, 1, (GLfloat*)&lightColor[0]);
 
+		gMeshCounter = 0;
 		for (auto& entity : scene->mEntities) {
 			const auto& model = entity->mModel;
 			if (!model) continue;

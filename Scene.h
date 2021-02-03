@@ -4,13 +4,13 @@
 #include "Model.h"
 
 struct Entity {
+	typedef std::shared_ptr<Entity> Entity_;
 	Model_ mModel = nullptr;
 	glm::vec3 mPos = { 0,0,0 };
 	glm::vec3 mFront = { 0,0,1 };
 	glm::vec3 mUp = { 0,1,0 };
 	glm::quat mRot = { 1,0,0,0 };
 	glm::vec3 mScale = { 1,1,1 };
-	glm::vec3 mDebugFront = { 0,0,1 };
 	AnimationController_ mAnimationController;
 	bool mControllable = false;
 	bool mUseGravity = false;
@@ -19,6 +19,21 @@ struct Entity {
 	Entity() {}
 	Entity(Model_ model) : mModel(model) {}
 	Entity(Model_ model, const glm::vec3& pos) : mModel(model), mPos(pos) {}
+
+	Entity_ Clone() const {
+		auto clone = std::make_shared<Entity>();
+		clone->mModel = mModel;
+		clone->mPos = mPos;
+		clone->mFront = mFront;
+		clone->mUp = mUp;
+		clone->mRot = mRot;
+		clone->mScale = mScale;
+		clone->mControllable = mControllable;
+		clone->mUseGravity = mUseGravity;
+		clone->mGravity = mGravity;
+		return clone;
+	}
+
 	void Init() {
 		if (mModel && mModel->mAnimationSet) {
 			mAnimationController = std::make_shared<AnimationController>(mModel->mAnimationSet);

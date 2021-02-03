@@ -39,6 +39,21 @@ void Scene::Load(const std::string& fileName) {
 		}
 		entity->mControllable = cfg.HasMember("controllable") && cfg["controllable"].GetBool();
 		entity->mUseGravity = cfg.HasMember("useGravity") && cfg["useGravity"].GetBool();
-		mEntities.push_back(entity);
+
+		if (cfg.HasMember("array")) {
+			auto arrayObj = cfg["array"].GetArray();
+			float arraySpacing = cfg.HasMember("arraySpacing") ? cfg["arraySpacing"].GetFloat() : glm::length(model->mAABB.mHalfSize);
+			for (size_t ax = 0; ax < arrayObj[0].GetInt(); ++ax) {
+				for (size_t ay = 0; ay < arrayObj[1].GetInt(); ++ay) {
+					for (size_t az = 0; az < arrayObj[2].GetInt(); ++az) {
+						auto arrayEntity = entity->Clone();;
+						arrayEntity->mPos += glm::vec3(ax * arraySpacing, ay * arraySpacing, az * arraySpacing);
+						mEntities.push_back(arrayEntity);
+					}
+				}
+			}
+		} else {
+			mEntities.push_back(entity);
+		}
 	}
 }
