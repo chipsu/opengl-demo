@@ -32,7 +32,7 @@ void main() {
     vec3 result = (ambient + diffuse + specular) * inColor;
     outColor = vec4(result, 1.0);
 
-	if(inBarycentric.x < 0.01 || inBarycentric.y < 0.01 || inBarycentric.z < 0.01) {
-	    outColor = outColor * 0.25;
-	}
+	//if(inBarycentric.x < 0.01 || inBarycentric.y < 0.01 || inBarycentric.z < 0.01) {
+	//    outColor = outColor * 0.25;
+	//}
 } 
