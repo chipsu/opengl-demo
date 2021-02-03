@@ -4,6 +4,11 @@
 #include "Input.h"
 #include "UI.h"
 
+//extern "C" {
+//	_declspec(dllexport) unsigned long NvOptimusEnablement = 1;
+//	_declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
+//}
+
 Input* Input::sInstance = nullptr;
 
 Scene_ CreateScene(const int argc, const char** argv) {
@@ -152,6 +157,7 @@ int main(const int argc, const char **argv) {
 	int windowWidth, windowHeight;
 	glfwGetFramebufferSize(window, &windowWidth, &windowHeight);
 	glViewport(0, 0, windowWidth, windowHeight);
+	glfwSwapInterval(0);
 
 	auto ui = std::make_shared<UI>(window);
 
@@ -282,7 +288,7 @@ int main(const int argc, const char **argv) {
 		ui->NewFrame();
 
 		//ImGui::ShowDemoWindow();
-		ImGui::PlotHistogram("FPS", get_deque, (void*)&fps.mHistory, fps.mHistory.size());
+		//ImGui::PlotHistogram("FPS", get_deque, (void*)&fps.mHistory, fps.mHistory.size());
 
 		auto selectedModel = scene->mSelected ? scene->mSelected->mModel : nullptr;
 		if (selectedModel) {
@@ -309,6 +315,10 @@ int main(const int argc, const char **argv) {
 				}*/
 			}
 		}
+
+		ImGui::Text("GL_VENDOR: %s", glGetString(GL_VENDOR));
+		ImGui::Text("GL_RENDERER: %s", glGetString(GL_RENDERER));
+		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
 		if (scene->mSelected && scene->mSelected->mAnimationController) {
 			const auto ac = scene->mSelected->mAnimationController;
@@ -379,7 +389,6 @@ int main(const int argc, const char **argv) {
 				}
 			}
 
-			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 			ImGui::End();
 		}
 

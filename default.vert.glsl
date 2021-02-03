@@ -1,6 +1,6 @@
 #version 450
 
-#define MAX_BONES 1000
+#define MAX_BONES 192
 
 layout(location=0) uniform mat4 uProj;
 layout(location=1) uniform mat4 uView;
