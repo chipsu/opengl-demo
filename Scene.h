@@ -65,9 +65,12 @@ struct Scene {
 	}
 
 	void Update(float absoluteTime, float deltaTime) {
-		for (auto& entity : mEntities) {
+		std::for_each(std::execution::par, mEntities.begin(), mEntities.end(), [absoluteTime, deltaTime](auto& entity) {
 			entity->Update(absoluteTime, deltaTime);
-		}
+		});
+		//for (auto& entity : mEntities) {
+		//	entity->Update(absoluteTime, deltaTime);
+		//}
 	}
 
 	void SelectNext() {

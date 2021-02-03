@@ -81,6 +81,7 @@ struct AnimationNode {
 	std::vector<AnimationNode_> mChildren;
 	AnimationNode_ mParent;
 	glm::mat4 mTransform;
+	uint32_t mCachedBoneIndex = -2;
 
 	AnimationNode(const std::string& name, AnimationNode_ parent, const glm::mat4& transform) : mName(name), mParent(parent), mTransform(transform) {
 	}
@@ -143,6 +144,18 @@ struct AnimationSet {
 		return -1;
 	}
 
+	uint32_t GetBoneIndex(AnimationNode_ node) const {
+		if (node->mCachedBoneIndex != -2) return node->mCachedBoneIndex;
+		node->mCachedBoneIndex = GetBoneIndex(node->mName);
+		return node->mCachedBoneIndex;
+	}
+
+	uint32_t GetBoneIndex(const std::string& name) const {
+		const auto it = mBoneMappings.find(name);
+		if (it == mBoneMappings.end()) return -1;
+		return it->second;
+	}
+
 	uint32_t MapBone(const std::string& name, const glm::mat4& boneOffset) {
 		const auto it = mBoneMappings.find(name);
 		if (it != mBoneMappings.end()) {
@@ -164,13 +177,19 @@ struct AnimationController {
 	std::vector<glm::mat4> mFinalTransforms;
 
 	// FIX THIS
+	bool mBlended = false;
 	float mBlendInDuration = 0.5f;
 	float mBlendOut = 0.5f;
 	std::map<size_t, float> mBlendMap;
 	std::vector<glm::mat4> mBlendTransforms;
 
+	float mMinDelta = 1.0f / 60.0f;
+	float mNextUpdate = 0.0f;
+
 	AnimationController(AnimationSet_ animationSet) {
 		mAnimationSet = animationSet;
+		mFinalTransforms.resize(mAnimationSet->mBoneMappings.size(), glm::identity<glm::mat4>()); // FIXME
+		mBlendTransforms.resize(mAnimationSet->mBoneMappings.size()); // FIXME
 	}
 
 	/*
@@ -217,7 +236,14 @@ struct AnimationController {
 	}
 
 	void Update(float absoluteTime) {
-		mFinalTransforms.resize(mAnimationSet->mBoneMappings.size(), glm::identity<glm::mat4>()); // FIXME
+		if (absoluteTime < mNextUpdate) {
+			return;
+		}
+		mNextUpdate = absoluteTime + mMinDelta;
+		if (mBlended) {
+			UpdateBlended(absoluteTime);
+			return;
+		}
 		if (!GetAnimationEnabled()) {
 			return;
 		}
@@ -225,16 +251,15 @@ struct AnimationController {
 	}
 
 	void UpdateBlended(float absoluteTime) {
-		mBlendTransforms.resize(mAnimationSet->mBoneMappings.size()); // FIXME
 		std::fill(mFinalTransforms.begin(), mFinalTransforms.end(), glm::zero<glm::mat4>());
 
 		for (const auto& it : mBlendMap) {
 			const float weight = it.second;
 			if (weight < 0.001f) continue;
 			ReadNodeHierarchy(mBlendTransforms, it.first, absoluteTime);
-			for (size_t x = 0; x < mFinalTransforms.size(); ++x) {
-				mFinalTransforms[x] += mBlendTransforms[x] * weight;
-			}
+			std::transform(std::execution::par, mFinalTransforms.begin(), mFinalTransforms.end(), mBlendTransforms.begin(), mFinalTransforms.begin(), [weight](glm::mat4& a, glm::mat4& b) {
+				return a + b * weight;
+			});
 		}
 	}
 
@@ -248,9 +273,8 @@ struct AnimationController {
 		const auto nodeTransform = GetNodeTransform(animation, time, node);
 		const auto combinedTransform = parentTransform * nodeTransform;
 
-		const auto it = mAnimationSet->mBoneMappings.find(node->mName); // TODO: node->mBoneIndex?
-		if (it != mAnimationSet->mBoneMappings.end()) {
-			const auto boneIndex = it->second;
+		const auto boneIndex = mAnimationSet->GetBoneIndex(node);
+		if (boneIndex != -1) {
 			finalTransforms[boneIndex] = combinedTransform * mAnimationSet->mBoneOffsets[boneIndex];
 		}
 

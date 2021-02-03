@@ -156,7 +156,6 @@ int main(const int argc, const char **argv) {
 	const GLuint uViewPos = glGetUniformLocation(program->mID, "uViewPos");
 	const GLuint uLightColor = glGetUniformLocation(program->mID, "uLightColor");
 	
-	bool useBlender = false;
 	bool autoBlend = false;
 	bool animDetails = false;
 	bool modelDetails = true;
@@ -270,11 +269,6 @@ int main(const int argc, const char **argv) {
 			debugLines.push_back({ selected->mPos, selected->mPos + selected->mUp, { 0, 1, 0 } });
 		}
 
-		cam.UpdateView();
-		cam.UpdateProjection();
-
-		scene->Update(timer.mNow, timer.mDelta);
-
 		ui->NewFrame();
 
 		//ImGui::ShowDemoWindow();
@@ -319,16 +313,19 @@ int main(const int argc, const char **argv) {
 				}
 			}
 
-			ImGui::Checkbox("HeadRot", &headRot);
-			if (headRot) {
-				//ac->mHeadRot = glm::quatLookAt(cam.mFront, { 0, 0, 1 });
-				double mx = 0;
-				glfwGetCursorPos(window, &mx, nullptr);
-				ac->mHeadRot = glm::rotate(glm::identity<glm::quat>(), (float)mx * 0.025f, { 0, 1, 0 });
-			}
+			ImGui::Checkbox("Blend", &ac->mBlended);
+			if (ac->mBlended) {
+				ImGui::Checkbox("HeadRot", &headRot);
+				if (headRot) {
+					//ac->mHeadRot = glm::quatLookAt(cam.mFront, { 0, 0, 1 });
+					double mx = 0;
+					glfwGetCursorPos(window, &mx, nullptr);
+					ac->mHeadRot = glm::rotate(glm::identity<glm::quat>(), (float)mx * 0.025f, { 0, 1, 0 });
+				}
+				else {
+					ac->mHeadRot = glm::identity<glm::quat>();
+				}
 
-			ImGui::Checkbox("Blend", &useBlender);
-			if (useBlender) {
 				ImGui::Checkbox("autoBlend", &autoBlend);
 
 				// FIXME
@@ -370,13 +367,16 @@ int main(const int argc, const char **argv) {
 					ac->BlendAnimation(animIndex, selectedWeights[animIndex]);
 					animIndex++;
 				}
-
-				ac->UpdateBlended(timer.mNow); // FIXME
 			}
 
 			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 			ImGui::End();
 		}
+
+		cam.UpdateView();
+		cam.UpdateProjection();
+
+		scene->Update(timer.mNow, timer.mDelta);
 
 		glUniformMatrix4fv(uniformProj, 1, GL_FALSE, (GLfloat*)&cam.mProjection[0]);
 		glUniformMatrix4fv(uniformView, 1, GL_FALSE, (GLfloat*)&cam.mView[0]);

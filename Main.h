@@ -28,6 +28,8 @@
 #include <initializer_list>
 #include <list>
 #include <deque>
+#include <execution>
+
 
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
