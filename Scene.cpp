@@ -47,7 +47,8 @@ void Scene::Load(const std::string& fileName) {
 			auto obj = cfg["attachTo"].GetObject();
 			auto attachTo = Find(obj["name"].GetString());
 			assert(nullptr != attachTo);
-			auto node = attachTo->mModel->mAnimationSet->GetBoneIndex(obj["node"].GetString());
+			std::string nodeName = obj["node"].GetString();
+			auto node = attachTo->mModel->mAnimationSet->GetBoneIndex(nodeName);
 			assert(node != -1);
 			entity->mAttachTo = attachTo;
 			entity->mAttachToNode = node;

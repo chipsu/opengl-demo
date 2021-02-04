@@ -119,6 +119,7 @@ struct DebugLine {
 	glm::vec3 mStart;
 	glm::vec3 mEnd;
 	glm::vec3 mColor;
+	float mScale = 1.0f;
 };
 
 int main(const int argc, const char **argv) {
@@ -184,7 +185,6 @@ int main(const int argc, const char **argv) {
 	glm::vec3 lightColor = { 1.0f, 1.0f, 1.0f };
 
 	std::vector<DebugLine> debugLines;
-	float debugLineScale = 10.0f;
 
 	Camera cam;
 	cam.mRight = glm::normalize(glm::cross(cam.mUp, cam.mFront));
@@ -314,14 +314,27 @@ int main(const int argc, const char **argv) {
 					);
 				}*/
 			}
+			if (ImGui::TreeNode("ModelNodes")) {
+				auto renderTree = [](ModelNode_ node, auto renderTree) -> void {
+					if (ImGui::TreeNode(node->mName.c_str())) {
+						ImGui::Text(glm::to_string(node->mTransform).c_str());
+						for (auto& c : node->mChildren) {
+							renderTree(c, renderTree);
+						}
+						ImGui::TreePop();
+					}
+				};
+				renderTree(selectedModel->mRootNode, renderTree);
+				ImGui::TreePop();
+			}
 		}
 
 		ImGui::Text("GL_VENDOR: %s", glGetString(GL_VENDOR));
 		ImGui::Text("GL_RENDERER: %s", glGetString(GL_RENDERER));
 		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
-		if (scene->mSelected && scene->mSelected->mAnimationController) {
-			const auto ac = scene->mSelected->mAnimationController;
+		if (selected && selected->mAnimationController) {
+			const auto ac = selected->mAnimationController;
 			const auto as = ac->mAnimationSet;
 			ImGui::Begin("Animations");
 			ImGui::Text(ac->GetAnimationEnabled() ? ac->GetAnimation()->mName.c_str() : "DISABLED");
@@ -452,7 +465,7 @@ int main(const int argc, const char **argv) {
 					debugLine.mColor
 					});
 				debugMesh->mVertices.push_back({
-					debugLine.mEnd + (debugLine.mEnd - debugLine.mStart) * debugLineScale,
+					debugLine.mEnd + (debugLine.mEnd - debugLine.mStart) * debugLine.mScale,
 					{},
 					debugLine.mColor
 					});

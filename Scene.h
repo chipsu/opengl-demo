@@ -52,12 +52,12 @@ struct Entity {
 			mVelocity += mGravity * deltaTime;
 			if (mPos.y < 0) mPos.y = 0;
 		}
+		mTransform = glm::translate(glm::identity<glm::mat4>(), mPos);
+		mTransform *= glm::mat4_cast(mRot);
+		mTransform = glm::scale(mTransform, mScale);
 		if (mAttachTo && mAttachToNode != -1) {
-			mTransform = mAttachTo->mTransform * mAttachTo->mAnimationController->mFinalTransforms[mAttachToNode];
-		} else {
-			mTransform = glm::translate(glm::identity<glm::mat4>(), mPos);
-			mTransform *= glm::mat4_cast(mRot);
-			mTransform = glm::scale(mTransform, mScale);
+			//mTransform = glm::translate(mTransform, glm::vec3(-1.5f, 0, 1.9f)); // FIXME: where/how do we get this offset?
+			mTransform = mAttachTo->mTransform * mAttachTo->mAnimationController->mLocalTransforms[mAttachToNode] * mTransform; // FIXME: can be 1 frame behind
 		}
 	}
 
@@ -91,12 +91,12 @@ struct Scene {
 	}
 
 	void Update(float absoluteTime, float deltaTime) {
-		std::for_each(std::execution::par, mEntities.begin(), mEntities.end(), [absoluteTime, deltaTime](auto& entity) {
+		/*std::for_each(std::execution::par, mEntities.begin(), mEntities.end(), [absoluteTime, deltaTime](auto& entity) {
 			entity->Update(absoluteTime, deltaTime);
-		});
-		//for (auto& entity : mEntities) {
-		//	entity->Update(absoluteTime, deltaTime);
-		//}
+		});*/
+		for (auto& entity : mEntities) {
+			entity->Update(absoluteTime, deltaTime);
+		}
 	}
 
 	Entity_ Find(const std::string& name) const {
