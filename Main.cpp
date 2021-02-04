@@ -68,7 +68,7 @@ struct Camera {
 	float mFov = glm::radians(45.0f);
 	float mAspect = 1.0f;
 	float mNear = 0.1f;
-	float mFar = 1000.0f;
+	float mFar = 10000.0f;
 
 	glm::mat4 mView;
 	glm::mat4 mProjection;
@@ -389,6 +389,23 @@ int main(const int argc, const char **argv) {
 				}
 			}
 
+			if (ImGui::CollapsingHeader("Stuff")) {
+				ImGui::End();
+			}
+
+			if (ImGui::TreeNode("AnimationNodes")) {
+				auto renderTree = [](AnimationNode_ node, auto renderTree) -> void {
+					if (ImGui::TreeNode(node->mName.c_str())) {
+						for (auto& c : node->mChildren) {
+							renderTree(c, renderTree);
+						}
+						ImGui::TreePop();
+					}
+				};
+				renderTree(as->mAnimations[0]->mRootNode, renderTree);
+				ImGui::TreePop();
+			}
+
 			ImGui::End();
 		}
 
@@ -411,10 +428,13 @@ int main(const int argc, const char **argv) {
 				const auto& bones = entity->mAnimationController->mFinalTransforms;
 				glUniformMatrix4fv(uniformBones, bones.size(), GL_FALSE, (GLfloat*)&bones[0]);
 			}
-			glm::mat4 transform = glm::translate(glm::identity<glm::mat4>(), entity->mPos);
-			transform *= glm::mat4_cast(entity->mRot);
-			transform = glm::scale(transform, entity->mScale);
-			RenderNode(uniformModel, model->mRootNode, transform);
+			for (auto& modelMesh : model->mMeshes) {
+				if (modelMesh->mMesh->mHidden) continue;
+				glm::mat4 meshTransform = entity->mTransform * modelMesh->mTransform;
+				glUniformMatrix4fv(uniformModel, 1, GL_FALSE, (GLfloat*)&meshTransform[0]);
+				modelMesh->mMesh->Bind();
+				glDrawElements(GL_TRIANGLES, modelMesh->mMesh->mIndices.size(), GL_UNSIGNED_INT, 0);
+			}
 		}
 
 		if (enableDebug) {

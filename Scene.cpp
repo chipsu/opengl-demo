@@ -25,6 +25,9 @@ void Scene::Load(const std::string& fileName) {
 				model->LoadAnimation(anim.GetString(), modelOptions, true);
 			}
 		}
+		if (cfg.HasMember("name")) {
+			entity->mName = cfg["name"].GetString();
+		}
 		if (cfg.HasMember("position")) {
 			const auto& pos = cfg["position"].GetArray();
 			entity->mPos = { pos[0].GetFloat(), pos[1].GetFloat(), pos[2].GetFloat() };
@@ -39,6 +42,16 @@ void Scene::Load(const std::string& fileName) {
 		}
 		entity->mControllable = cfg.HasMember("controllable") && cfg["controllable"].GetBool();
 		entity->mUseGravity = cfg.HasMember("useGravity") && cfg["useGravity"].GetBool();
+
+		if (cfg.HasMember("attachTo")) {
+			auto obj = cfg["attachTo"].GetObject();
+			auto attachTo = Find(obj["name"].GetString());
+			assert(nullptr != attachTo);
+			auto node = attachTo->mModel->mAnimationSet->GetBoneIndex(obj["node"].GetString());
+			assert(node != -1);
+			entity->mAttachTo = attachTo;
+			entity->mAttachToNode = node;
+		}
 
 		if (cfg.HasMember("array")) {
 			auto arrayObj = cfg["array"].GetArray();

@@ -5,6 +5,15 @@
 #include "Animation.h"
 #include "AABB.h"
 
+struct ModelMesh {
+	typedef std::shared_ptr<ModelMesh> ModelMesh_;
+	Mesh_ mMesh;
+	glm::mat4 mTransform;
+
+	ModelMesh(Mesh_ mesh, const glm::mat4& transform) : mMesh(mesh), mTransform(transform) {}
+};
+typedef ModelMesh::ModelMesh_ ModelMesh_;
+
 struct ModelNode {
 	typedef std::shared_ptr<ModelNode> ModelNode_;
 	std::string mName;
@@ -32,6 +41,7 @@ struct ModelOptions {
 struct Model {
 	std::string mName;
 	ModelNode_ mRootNode; // FIXME
+	std::vector<ModelMesh_> mMeshes;
 	AnimationSet_ mAnimationSet;
 	AABB mAABB;
 	void Load(const std::string& fileName) { Load(fileName, {}); }

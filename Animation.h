@@ -86,8 +86,8 @@ struct AnimationNode {
 	AnimationNode(const std::string& name, AnimationNode_ parent, const glm::mat4& transform) : mName(name), mParent(parent), mTransform(transform) {
 	}
 
-	void Recurse(std::function<void(AnimationNode& node)> callback) {
-		callback(*this);
+	void Recurse(std::function<bool(AnimationNode& node)> callback) {
+		if (!callback(*this)) return;
 		for (auto& child : mChildren) {
 			child->Recurse(callback);
 		}

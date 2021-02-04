@@ -11,11 +11,15 @@ struct Entity {
 	glm::vec3 mUp = { 0,1,0 };
 	glm::quat mRot = { 1,0,0,0 };
 	glm::vec3 mScale = { 1,1,1 };
+	glm::mat4 mTransform = glm::identity<glm::mat4>();
 	AnimationController_ mAnimationController;
 	bool mControllable = false;
 	bool mUseGravity = false;
 	glm::vec3 mVelocity = { 0,0,0 };
 	glm::vec3 mGravity = { 0, -200.0f, 0 };
+	std::string mName;
+	Entity_ mAttachTo;
+	uint32_t mAttachToNode = -1;
 	Entity() {}
 	Entity(Model_ model) : mModel(model) {}
 	Entity(Model_ model, const glm::vec3& pos) : mModel(model), mPos(pos) {}
@@ -47,6 +51,13 @@ struct Entity {
 		if (mUseGravity) {
 			mVelocity += mGravity * deltaTime;
 			if (mPos.y < 0) mPos.y = 0;
+		}
+		if (mAttachTo && mAttachToNode != -1) {
+			mTransform = mAttachTo->mTransform * mAttachTo->mAnimationController->mFinalTransforms[mAttachToNode];
+		} else {
+			mTransform = glm::translate(glm::identity<glm::mat4>(), mPos);
+			mTransform *= glm::mat4_cast(mRot);
+			mTransform = glm::scale(mTransform, mScale);
 		}
 	}
 
@@ -86,6 +97,13 @@ struct Scene {
 		//for (auto& entity : mEntities) {
 		//	entity->Update(absoluteTime, deltaTime);
 		//}
+	}
+
+	Entity_ Find(const std::string& name) const {
+		for (const auto& entity : mEntities) {
+			if (entity->mName == name) return entity;
+		}
+		return nullptr;
 	}
 
 	void SelectNext() {
