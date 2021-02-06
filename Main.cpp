@@ -119,7 +119,6 @@ struct DebugLine {
 	glm::vec3 mStart;
 	glm::vec3 mEnd;
 	glm::vec3 mColor;
-	float mScale = 1.0f;
 };
 
 int main(const int argc, const char **argv) {
@@ -185,6 +184,14 @@ int main(const int argc, const char **argv) {
 	glm::vec3 lightColor = { 1.0f, 1.0f, 1.0f };
 
 	std::vector<DebugLine> debugLines;
+	std::vector<DebugLine> persistentDebugLines;
+
+	float gridScale = 1.0f;
+	int gridHalfSize = 10;
+	for (int dx = -gridHalfSize; dx <= gridHalfSize; ++dx) {
+		persistentDebugLines.push_back({ {dx * gridScale, 0, -gridHalfSize * gridScale}, {dx * gridScale, 0, gridHalfSize * gridScale}, {.5f, .5f, .5f} });
+		persistentDebugLines.push_back({ {-gridHalfSize * gridScale, 0, dx * gridScale}, {gridHalfSize * gridScale, 0, dx * gridScale}, {.5f, .5f, .5f} });
+	}
 
 	Camera cam;
 	cam.mRight = glm::normalize(glm::cross(cam.mUp, cam.mFront));
@@ -220,7 +227,7 @@ int main(const int argc, const char **argv) {
 
 		auto selected = scene->mSelected;
 		if (nullptr != selected) {
-			movementSpeed = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) ? 100.0f : 40.0f;
+			movementSpeed = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) ? 10.0f : 2.0f;
 
 			if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
 				auto targetFront = glm::cross(cam.mRight, selected->mUp);
@@ -243,8 +250,8 @@ int main(const int argc, const char **argv) {
 				scene->mSelected->Strafe(timer.mDelta * -movementSpeed);
 			if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
 				scene->mSelected->Strafe(timer.mDelta * movementSpeed);
-			if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && scene->mSelected->mPos.y < 1.0f)
-				scene->mSelected->mVelocity.y = 100.0f;
+			if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && scene->mSelected->mPos.y < 0.001f)
+				scene->mSelected->mVelocity.y = 40.0f;
 			//if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
 			//	cam.Crounch();
 
@@ -451,27 +458,34 @@ int main(const int argc, const char **argv) {
 		}
 
 		if (enableDebug) {
-			glDisable(GL_DEPTH_TEST);
+			auto drawDebugLines = [](auto& debugLines) {
+				for (auto& debugLine : debugLines) {
+					auto debugMesh = std::make_shared<Mesh>();
+					debugMesh->mIndices.push_back(0);
+					debugMesh->mIndices.push_back(1);
+					debugMesh->mVertices.push_back({
+						debugLine.mStart,
+						{},
+						debugLine.mColor
+						});
+					debugMesh->mVertices.push_back({
+						debugLine.mEnd,
+						{},
+						debugLine.mColor
+						});
+					debugMesh->Bind();
+					glDrawElements(GL_LINES, debugMesh->mIndices.size(), GL_UNSIGNED_INT, 0);
+				}
+			};
+
 			glUseProgram(debugProgram->mID);
 			glUniformMatrix4fv(glGetUniformLocation(debugProgram->mID, "uProj"), 1, GL_FALSE, (GLfloat*)&cam.mProjection[0]);
 			glUniformMatrix4fv(glGetUniformLocation(debugProgram->mID, "uView"), 1, GL_FALSE, (GLfloat*)&cam.mView[0]);
-			for (auto& debugLine : debugLines) {
-				auto debugMesh = std::make_shared<Mesh>();
-				debugMesh->mIndices.push_back(0);
-				debugMesh->mIndices.push_back(1);
-				debugMesh->mVertices.push_back({
-					debugLine.mStart,
-					{},
-					debugLine.mColor
-					});
-				debugMesh->mVertices.push_back({
-					debugLine.mEnd + (debugLine.mEnd - debugLine.mStart) * debugLine.mScale,
-					{},
-					debugLine.mColor
-					});
-				debugMesh->Bind();
-				glDrawElements(GL_LINES, debugMesh->mIndices.size(), GL_UNSIGNED_INT, 0);
-			}
+
+			drawDebugLines(persistentDebugLines);
+
+			glDisable(GL_DEPTH_TEST);
+			drawDebugLines(debugLines);
 		}
 		debugLines.clear();
 

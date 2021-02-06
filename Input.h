@@ -117,7 +117,7 @@ struct Input {
 
 	void OnMouseScroll(GLFWwindow* window, double xoffset, double yoffset) {
 		if (false) printf("scroll_callback: %f %f\n", xoffset, yoffset);
-		const float scale = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ? 10.0f : 1.0f;
+		const float scale = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ? 1.0f : 0.1f;
 		mScene->mCameraDistance -= (float)yoffset * scale;
 		mScene->mCameraDistance = glm::clamp(mScene->mCameraDistance, 1.0f, 1000.0f);
 		//printf("SCROLL: %f\n", mScene->mCameraDistance);

@@ -85,6 +85,15 @@ struct AnimationNode {
 
 	AnimationNode(const std::string& name, AnimationNode_ parent, const glm::mat4& transform) : mName(name), mParent(parent), mTransform(transform) {
 	}
+
+	AnimationNode* Find(const std::string& name) {
+		if (mName == name) return this;
+		for (auto& child : mChildren) {
+			auto node = child->Find(name);
+			if (node) return node;
+		}
+		return nullptr;
+	}
 };
 typedef AnimationNode::AnimationNode_ AnimationNode_;
 
