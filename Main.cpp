@@ -121,6 +121,18 @@ struct DebugLine {
 	glm::vec3 mColor;
 };
 
+struct DebugPoint {
+	glm::mat4 mTransform;
+	glm::vec3 mColor = { 1,1,1 };
+	DebugPoint() {}
+	DebugPoint(const glm::mat4& t) : mTransform(t) {}
+	DebugPoint(float x, float y, float z, float s = 0.01f) : DebugPoint(glm::vec3(x, y, z), s) {}
+	DebugPoint(const glm::vec3& p, float s = 0.01f) {
+		mTransform = glm::translate(glm::identity<glm::mat4>(), p);
+		mTransform = glm::scale(mTransform, glm::vec3(s, s, s));
+	}
+};
+
 int main(const int argc, const char **argv) {
 	if (!glfwInit()) {
 		std::cerr << "glfwInit failed" << std::endl;
@@ -176,6 +188,8 @@ int main(const int argc, const char **argv) {
 	bool animDetails = false;
 	bool modelDetails = true;
 	bool enableDebug = true;
+	bool drawDebug = true;
+	bool drawPersistentDebug = true;
 	bool headRot = false;
 
 	std::vector<float> selectedWeights;
@@ -184,6 +198,7 @@ int main(const int argc, const char **argv) {
 	glm::vec3 lightColor = { 1.0f, 1.0f, 1.0f };
 
 	std::vector<DebugLine> debugLines;
+	std::vector<DebugPoint> debugPoints;
 	std::vector<DebugLine> persistentDebugLines;
 
 	float gridScale = 1.0f;
@@ -192,6 +207,27 @@ int main(const int argc, const char **argv) {
 		persistentDebugLines.push_back({ {dx * gridScale, 0, -gridHalfSize * gridScale}, {dx * gridScale, 0, gridHalfSize * gridScale}, {.5f, .5f, .5f} });
 		persistentDebugLines.push_back({ {-gridHalfSize * gridScale, 0, dx * gridScale}, {gridHalfSize * gridScale, 0, dx * gridScale}, {.5f, .5f, .5f} });
 	}
+
+	auto debugCube = std::make_shared<Mesh>();
+	for (int debugCubeZ = 1; debugCubeZ >= -1; debugCubeZ -= 2) {
+		debugCube->mVertices.push_back({ { -1, -1, debugCubeZ }, {}, { +1, +1, +1 } });
+		debugCube->mVertices.push_back({ { +1, -1, debugCubeZ }, {}, { +1, +1, +1 } });
+		debugCube->mVertices.push_back({ { +1, +1, debugCubeZ }, {}, { +1, +1, +1 } });
+		debugCube->mVertices.push_back({ { -1, +1, debugCubeZ }, {}, { +1, +1, +1 } });
+	}
+	debugCube->mIndices.push_back(0);
+	debugCube->mIndices.push_back(1);
+	debugCube->mIndices.push_back(2);
+	debugCube->mIndices.push_back(3);
+	debugCube->mIndices.push_back(0);
+	debugCube->mIndices.push_back(2);
+
+	/*debugCube->mIndices.push_back(4);
+	debugCube->mIndices.push_back(5);
+	debugCube->mIndices.push_back(6);
+	debugCube->mIndices.push_back(7);
+	debugCube->mIndices.push_back(4);
+	debugCube->mIndices.push_back(6);*/
 
 	Camera cam;
 	cam.mRight = glm::normalize(glm::cross(cam.mUp, cam.mFront));
@@ -296,10 +332,14 @@ int main(const int argc, const char **argv) {
 
 		//ImGui::ShowDemoWindow();
 		//ImGui::PlotHistogram("FPS", get_deque, (void*)&fps.mHistory, fps.mHistory.size());
+		ImGui::Checkbox("debug", &enableDebug);
+		if (enableDebug) {
+			ImGui::Checkbox("drawDebug", &drawDebug);
+			ImGui::Checkbox("drawPersistentDebug", &drawPersistentDebug);
+		}
 
 		auto selectedModel = scene->mSelected ? scene->mSelected->mModel : nullptr;
 		if (selectedModel) {
-			ImGui::Checkbox("debug", &enableDebug);
 			ImGui::Checkbox("Model info", &modelDetails);
 			ImGui::Text(std::to_string(scene->mCameraRotationX).c_str());
 			ImGui::Text(std::to_string(scene->mCameraRotationY).c_str());
@@ -478,19 +518,37 @@ int main(const int argc, const char **argv) {
 				}
 			};
 
+			auto debugTransform = glm::identity<glm::mat4>();
+
 			glUseProgram(debugProgram->mID);
 			glUniformMatrix4fv(glGetUniformLocation(debugProgram->mID, "uProj"), 1, GL_FALSE, (GLfloat*)&cam.mProjection[0]);
 			glUniformMatrix4fv(glGetUniformLocation(debugProgram->mID, "uView"), 1, GL_FALSE, (GLfloat*)&cam.mView[0]);
+			glUniformMatrix4fv(glGetUniformLocation(debugProgram->mID, "uModel"), 1, GL_FALSE, (GLfloat*)&debugTransform[0]);
 
-			drawDebugLines(persistentDebugLines);
+			if (drawPersistentDebug) {
+				drawDebugLines(persistentDebugLines);
+			}
 
-			glDisable(GL_DEPTH_TEST);
-			drawDebugLines(debugLines);
+			if (drawDebug) {
+				debugPoints.push_back(DebugPoint(0, 0, 0));
+
+				debugCube->Bind();
+				for (auto& debugPoint : debugPoints) {
+					glUniformMatrix4fv(glGetUniformLocation(debugProgram->mID, "uModel"), 1, GL_FALSE, (GLfloat*)&debugPoint.mTransform[0]);
+					glDrawElements(GL_TRIANGLES, debugCube->mIndices.size(), GL_UNSIGNED_INT, 0);
+				}
+
+				glDisable(GL_DEPTH_TEST);
+				drawDebugLines(debugLines);
+			}
 		}
 		debugLines.clear();
+		debugPoints.clear();
 
 		ui->Render();
 	}
+
+	debugCube = nullptr;
 
 	input.reset();
 	scene.reset();
