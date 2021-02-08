@@ -16,7 +16,8 @@ struct Entity {
 	bool mControllable = false;
 	bool mUseGravity = false;
 	glm::vec3 mVelocity = { 0,0,0 };
-	glm::vec3 mGravity = { 0, -200.0f, 0 };
+	glm::vec3 mGravity = { 0, -10, 0 };
+	bool mGrounded = false;
 	std::string mName;
 	Entity_ mAttachTo;
 	uint32_t mAttachToNode = -1;
@@ -43,6 +44,7 @@ struct Entity {
 			mAnimationController = std::make_shared<AnimationController>(mModel->mAnimationSet);
 		}
 	}
+
 	void Update(float absoluteTime, float deltaTime) {
 		if (mAnimationController) {
 			mAnimationController->Update(absoluteTime);
@@ -50,7 +52,13 @@ struct Entity {
 		mPos += mVelocity * deltaTime;
 		if (mUseGravity) {
 			mVelocity += mGravity * deltaTime;
-			if (mPos.y < 0) mPos.y = 0;
+		}
+		if (mUseGravity && mPos.y <= 0) {
+			mPos.y = 0;
+			if (!mGrounded) {
+				std::cout << "Grounded!" << std::endl;
+				mGrounded = true;
+			}
 		}
 		mTransform = glm::translate(glm::identity<glm::mat4>(), mPos);
 		mTransform *= glm::mat4_cast(mRot);
@@ -67,6 +75,13 @@ struct Entity {
 
 	void Strafe(float f) {
 		mPos += glm::normalize(glm::cross(mFront, mUp)) * f;
+	}
+
+	void Jump() {
+		if (!mGrounded) return;
+		std::cout << "JumpJumpJump!" << std::endl;
+		mVelocity += mGravity * -0.5f;
+		mGrounded = false;
 	}
 };
 typedef std::shared_ptr<Entity> Entity_;

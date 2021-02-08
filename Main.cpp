@@ -286,8 +286,8 @@ int main(const int argc, const char **argv) {
 				scene->mSelected->Strafe(timer.mDelta * -movementSpeed);
 			if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
 				scene->mSelected->Strafe(timer.mDelta * movementSpeed);
-			if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && scene->mSelected->mPos.y < 0.001f)
-				scene->mSelected->mVelocity.y = 40.0f;
+			if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+				scene->mSelected->Jump();
 			//if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
 			//	cam.Crounch();
 
