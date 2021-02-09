@@ -330,6 +330,10 @@ int main(const int argc, const char **argv) {
 
 		ui->NewFrame();
 
+		if (selected) {
+			ImGui::PlotHistogram("Y", get_deque, (void*)&selected->mHistoryY, selected->mHistoryY.size(), 0, NULL, FLT_MAX, FLT_MAX, ImVec2(600, 400));
+		}
+
 		//ImGui::ShowDemoWindow();
 		//ImGui::PlotHistogram("FPS", get_deque, (void*)&fps.mHistory, fps.mHistory.size());
 		ImGui::Checkbox("debug", &enableDebug);
