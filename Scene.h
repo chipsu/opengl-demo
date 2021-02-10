@@ -45,19 +45,66 @@ struct Entity {
 		}
 	}
 
+	glm::vec3 mForce = { 0,0,0 };
+	float mMass = 1.0f;
+	float mStep = 1.0f / 60.0f;
+	float mAccum = 0.0f;
+	float mMaxVelocity = 100.0f;
+	std::deque<float> mHistoryY;
+
+	glm::vec3 GetGravity() {
+		return mUseGravity ? mGravity : glm::zero<glm::vec3>();
+	}
+
+	glm::vec3 GetForce() {
+		return GetGravity() + mForce;
+	}
+
+	float GetDampening() {
+		return mGrounded ? 2.0f : 1.0f;
+	}
+
 	void Update(float absoluteTime, float deltaTime) {
 		if (mAnimationController) {
 			mAnimationController->Update(absoluteTime);
 		}
-		mPos += mVelocity * deltaTime;
-		if (mUseGravity) {
-			mVelocity += mGravity * deltaTime;
-		}
-		if (mUseGravity && mPos.y <= 0) {
-			mPos.y = 0;
-			if (!mGrounded) {
-				std::cout << "Grounded!" << std::endl;
-				mGrounded = true;
+		if(mUseGravity) {
+			mAccum += deltaTime;
+			size_t physUpdates = 0;
+			if (mAccum < mStep) return;
+			while (mAccum >= mStep) {
+				auto accel = GetForce() / mMass;
+				//mVelocity = accel;
+				//mPos += mVelocity * mStep;
+				//mPos.y = 1.0f + sin(absoluteTime);
+				/*mPos += mStep * (mVelocity + accel * mStep * 0.5f);
+				mVelocity += accel * mStep;
+				mVelocity = mVelocity / (1.0f + GetDampening() * mStep);*/
+				mVelocity = mVelocity + GetGravity() * mStep + mForce;
+				mPos = mPos + mVelocity * mStep;
+				mVelocity = mVelocity / (1.0f + GetDampening() * mStep);
+
+				auto velocity = glm::length(mVelocity);
+				if (velocity > mMaxVelocity) {
+					mVelocity = mVelocity * (mMaxVelocity / velocity);
+				}
+
+				mForce = { 0,0,0 };
+				mAccum -= mStep;
+				physUpdates++;
+			}
+			if (mPos.y > 0.0f) {
+				mHistoryY.push_back(mPos.y);
+				if (mHistoryY.size() > 200) mHistoryY.pop_front();
+			}
+			if (physUpdates > 0 && mPos.y <= 0) {
+				mPos.y = 0;
+				if (!mGrounded && mForce.y < 0.001f) {
+					std::cout << "Grounded!" << std::endl;
+					mGrounded = true;
+					//mHistoryY.push_back(-0.5f);
+					//if (mHistoryY.size() > 200) mHistoryY.pop_front();
+				}
 			}
 		}
 		mTransform = glm::translate(glm::identity<glm::mat4>(), mPos);
@@ -80,8 +127,10 @@ struct Entity {
 	void Jump() {
 		if (!mGrounded) return;
 		std::cout << "JumpJumpJump!" << std::endl;
-		mVelocity += mGravity * -0.5f;
+		mForce = mGravity * -2.0f;
 		mGrounded = false;
+		//mHistoryY.push_back(-0.25f);
+		//if (mHistoryY.size() > 200) mHistoryY.pop_front();
 	}
 };
 typedef std::shared_ptr<Entity> Entity_;

@@ -88,14 +88,17 @@ struct Timer {
 template<typename T>
 struct FrameCounter {
 	std::deque<T> mHistory;
+	std::deque<T> mFrameTimeHistory;
 	size_t mHistoryLimit = 0;
 	size_t mCounter = 0;
 	T mInterval = 1.0;
 	T mNextUpdate = 0;
 	size_t mValue = 0;
 
-	bool Tick(const T now) {
+	bool Tick(const T now, const T delta) {
 		mCounter++;
+		mFrameTimeHistory.push_back(delta);
+		if (mFrameTimeHistory.size() > mHistoryLimit) mFrameTimeHistory.pop_front();
 		if (mNextUpdate > now) return false;
 		mValue = mCounter;
 		if (mHistoryLimit > 0) {

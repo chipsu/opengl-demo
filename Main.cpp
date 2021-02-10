@@ -236,14 +236,14 @@ int main(const int argc, const char **argv) {
 	float camSpeed = 10.0f;
 
 	FrameCounter<float> fps;
-	fps.mHistoryLimit = 30;
+	fps.mHistoryLimit = 600;
 
 	Timer<float> timer;
 
 	while (!glfwWindowShouldClose(window)) {
 		timer.Update();
 
-		if (fps.Tick(timer.mNow)) {
+		if (fps.Tick(timer.mNow, timer.mDelta)) {
 			glfwSetWindowTitle(window, (windowTitle + " - FPS: " + std::to_string(fps.mValue)).c_str());
 		}
 
@@ -330,12 +330,14 @@ int main(const int argc, const char **argv) {
 
 		ui->NewFrame();
 
+		//ImGui::ShowDemoWindow();
+		ImGui::PlotHistogram("FPS", get_deque, (void*)&fps.mHistory, fps.mHistory.size(), 0, NULL, FLT_MAX, FLT_MAX, ImVec2(600, 100));
+		ImGui::PlotHistogram("DT", get_deque, (void*)&fps.mFrameTimeHistory, fps.mFrameTimeHistory.size(), 0, NULL, FLT_MAX, FLT_MAX, ImVec2(600, 100));
+
 		if (selected) {
-			ImGui::PlotHistogram("Y", get_deque, (void*)&selected->mHistoryY, selected->mHistoryY.size(), 0, NULL, FLT_MAX, FLT_MAX, ImVec2(600, 400));
+			ImGui::PlotHistogram("Y", get_deque, (void*)&selected->mHistoryY, selected->mHistoryY.size(), 0, NULL, FLT_MAX, FLT_MAX, ImVec2(600, 100));
 		}
 
-		//ImGui::ShowDemoWindow();
-		//ImGui::PlotHistogram("FPS", get_deque, (void*)&fps.mHistory, fps.mHistory.size());
 		ImGui::Checkbox("debug", &enableDebug);
 		if (enableDebug) {
 			ImGui::Checkbox("drawDebug", &drawDebug);
@@ -471,8 +473,17 @@ int main(const int argc, const char **argv) {
 			}
 
 			ImGui::End();
+
+			/*if (enableDebug) {
+				const auto transforms = ac->mLocalTransforms;
+				for (const auto t : transforms) {
+					auto t2 = glm::scale(t, glm::vec3(0.1f, 0.1f, 0.1f));
+					debugPoints.push_back(DebugPoint(t2));
+				}
+			}*/
 		}
 
+		//cam.mView = glm::lookAt(glm::vec3(4.0f,4.0f,4.0f), glm::vec3(0.0f,2.0f,0.0f), glm::vec3(0.0f,1.0f,0.0f));
 		cam.UpdateView();
 		cam.UpdateProjection();
 
