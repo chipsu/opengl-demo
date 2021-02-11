@@ -332,7 +332,7 @@ int main(const int argc, const char **argv) {
 
 		//ImGui::ShowDemoWindow();
 		ImGui::PlotHistogram("FPS", get_deque, (void*)&fps.mHistory, fps.mHistory.size(), 0, NULL, FLT_MAX, FLT_MAX, ImVec2(600, 100));
-		ImGui::PlotHistogram("DT", get_deque, (void*)&fps.mFrameTimeHistory, fps.mFrameTimeHistory.size(), 0, NULL, FLT_MAX, FLT_MAX, ImVec2(600, 100));
+		//ImGui::PlotHistogram("DT", get_deque, (void*)&fps.mFrameTimeHistory, fps.mFrameTimeHistory.size(), 0, NULL, FLT_MAX, FLT_MAX, ImVec2(600, 100));
 
 		if (selected) {
 			ImGui::PlotHistogram("Y", get_deque, (void*)&selected->mHistoryY, selected->mHistoryY.size(), 0, NULL, FLT_MAX, FLT_MAX, ImVec2(600, 100));

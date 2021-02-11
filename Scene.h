@@ -43,6 +43,8 @@ struct Entity {
 		if (mModel && mModel->mAnimationSet) {
 			mAnimationController = std::make_shared<AnimationController>(mModel->mAnimationSet);
 		}
+		mPrevPos = mPos;
+		mPrevRot = mRot;
 	}
 
 	glm::vec3 mForce = { 0,0,0 };
@@ -50,6 +52,8 @@ struct Entity {
 	float mStep = 1.0f / 60.0f;
 	float mAccum = 0.0f;
 	float mMaxVelocity = 100.0f;
+	glm::vec3 mPrevPos;
+	glm::quat mPrevRot;
 	std::deque<float> mHistoryY;
 
 	glm::vec3 GetGravity() {
@@ -64,51 +68,61 @@ struct Entity {
 		return mGrounded ? 2.0f : 1.0f;
 	}
 
+	void UpdatePhysics(float deltaTime) {
+		if (!mUseGravity) return;
+		mPrevPos = mPos;
+		mPrevRot = mRot;
+		mAccum += deltaTime;
+		if (mAccum < mStep) return;
+		while (mAccum >= mStep) {
+			UpdatePhysicsStep();
+			mAccum -= mStep;
+		}
+		if (mPos.y <= 0) {
+			mPos.y = 0;
+			if (!mGrounded && mForce.y < 0.001f) {
+				std::cout << "Grounded!" << std::endl;
+				mGrounded = true;
+				//mHistoryY.push_back(-0.5f);
+				//if (mHistoryY.size() > 200) mHistoryY.pop_front();
+			}
+		}
+		if (mPos.y > 0.0f) {
+			mHistoryY.push_back(mPos.y);
+			if (mHistoryY.size() > 200) mHistoryY.pop_front();
+		}
+	}
+
+	void UpdatePhysicsStep() {
+		auto accel = GetForce() / mMass;
+		//mVelocity = accel;
+		//mPos += mVelocity * mStep;
+		//mPos.y = 1.0f + sin(absoluteTime);
+		/*mPos += mStep * (mVelocity + accel * mStep * 0.5f);
+		mVelocity += accel * mStep;
+		mVelocity = mVelocity / (1.0f + GetDampening() * mStep);*/
+		mVelocity = mVelocity + GetGravity() * mStep + mForce;
+		mPos = mPos + mVelocity * mStep;
+		mVelocity = mVelocity / (1.0f + GetDampening() * mStep);
+
+		auto velocity = glm::length(mVelocity);
+		if (velocity > mMaxVelocity) {
+			mVelocity = mVelocity * (mMaxVelocity / velocity);
+		}
+
+		mForce = { 0,0,0 };
+	}
+	
 	void Update(float absoluteTime, float deltaTime) {
 		if (mAnimationController) {
 			mAnimationController->Update(absoluteTime);
 		}
-		if(mUseGravity) {
-			mAccum += deltaTime;
-			size_t physUpdates = 0;
-			if (mAccum < mStep) return;
-			while (mAccum >= mStep) {
-				auto accel = GetForce() / mMass;
-				//mVelocity = accel;
-				//mPos += mVelocity * mStep;
-				//mPos.y = 1.0f + sin(absoluteTime);
-				/*mPos += mStep * (mVelocity + accel * mStep * 0.5f);
-				mVelocity += accel * mStep;
-				mVelocity = mVelocity / (1.0f + GetDampening() * mStep);*/
-				mVelocity = mVelocity + GetGravity() * mStep + mForce;
-				mPos = mPos + mVelocity * mStep;
-				mVelocity = mVelocity / (1.0f + GetDampening() * mStep);
-
-				auto velocity = glm::length(mVelocity);
-				if (velocity > mMaxVelocity) {
-					mVelocity = mVelocity * (mMaxVelocity / velocity);
-				}
-
-				mForce = { 0,0,0 };
-				mAccum -= mStep;
-				physUpdates++;
-			}
-			if (mPos.y > 0.0f) {
-				mHistoryY.push_back(mPos.y);
-				if (mHistoryY.size() > 200) mHistoryY.pop_front();
-			}
-			if (physUpdates > 0 && mPos.y <= 0) {
-				mPos.y = 0;
-				if (!mGrounded && mForce.y < 0.001f) {
-					std::cout << "Grounded!" << std::endl;
-					mGrounded = true;
-					//mHistoryY.push_back(-0.5f);
-					//if (mHistoryY.size() > 200) mHistoryY.pop_front();
-				}
-			}
-		}
-		mTransform = glm::translate(glm::identity<glm::mat4>(), mPos);
-		mTransform *= glm::mat4_cast(mRot);
+		UpdatePhysics(deltaTime);
+		auto lp = std::min(deltaTime, 1.0f);
+		auto pos = glm::lerp(mPrevPos, mPos, lp);
+		auto rot = glm::lerp(mPrevRot, mRot, lp);
+		mTransform = glm::translate(glm::identity<glm::mat4>(), pos);
+		mTransform *= glm::mat4_cast(rot);
 		mTransform = glm::scale(mTransform, mScale);
 		if (mAttachTo && mAttachToNode != -1) {
 			//mTransform = glm::translate(mTransform, glm::vec3(-1.5f, 0, 1.9f)); // FIXME: where/how do we get this offset?
