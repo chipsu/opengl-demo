@@ -71,3 +71,20 @@ struct ShaderProgram {
 	}
 };
 typedef std::shared_ptr<ShaderProgram> ShaderProgram_;
+
+inline ShaderProgram_ CreateShaderProgram(const std::string& name) {
+	auto getType = [](const auto& type) {
+		if (type == "vert") return GL_VERTEX_SHADER;
+		if (type == "frag") return GL_FRAGMENT_SHADER;
+		if (type == "geom") return GL_GEOMETRY_SHADER;
+		throw new std::invalid_argument("Unknown shader type");
+	};
+	std::vector<Shader_> shaders;
+	for (const auto& type : { "vert", "geom", "frag" }) {
+		const auto file = "shaders/" + name + "." + type + ".glsl";
+		if (!std::filesystem::exists(file)) continue;
+		shaders.push_back(std::make_shared<Shader>(file, getType(type)));
+	}
+	assert(!shaders.empty());
+	return std::make_shared<ShaderProgram>(shaders);
+}

@@ -94,7 +94,7 @@ struct Entity {
 	}
 
 	void UpdatePhysicsStep() {
-		auto accel = GetForce() / mMass;
+		//auto accel = GetForce() / mMass;
 		//mVelocity = accel;
 		//mPos += mVelocity * mStep;
 		//mPos.y = 1.0f + sin(absoluteTime);
@@ -148,6 +148,14 @@ struct Entity {
 	}
 };
 typedef std::shared_ptr<Entity> Entity_;
+
+struct ModelEntity : Entity {
+
+};
+
+struct ParticleEntity : Entity {
+
+};
 
 struct Scene {
 	std::vector<Entity_> mEntities;

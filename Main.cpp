@@ -38,22 +38,6 @@ Scene_ CreateScene(const int argc, const char** argv) {
 	return scene;
 }
 
-ShaderProgram_ CreateShaderProgram() {
-	std::vector<Shader_> shaders;
-	shaders.push_back(std::make_shared<Shader>("default.vert.glsl", GL_VERTEX_SHADER));
-	//shaders.push_back(std::make_shared<Shader>("default.geom.glsl", GL_GEOMETRY_SHADER));
-	shaders.push_back(std::make_shared<Shader>("default.frag.glsl", GL_FRAGMENT_SHADER));
-	return std::make_shared<ShaderProgram>(shaders);
-}
-
-ShaderProgram_ CreateDebugShaderProgram() {
-	std::vector<Shader_> shaders;
-	shaders.push_back(std::make_shared<Shader>("debug.vert.glsl", GL_VERTEX_SHADER));
-	//shaders.push_back(std::make_shared<Shader>("debug.geom.glsl", GL_GEOMETRY_SHADER));
-	shaders.push_back(std::make_shared<Shader>("debug.frag.glsl", GL_FRAGMENT_SHADER));
-	return std::make_shared<ShaderProgram>(shaders);
-}
-
 float get_deque(void* data, int idx) {
 	auto deque = (std::deque<float>*)data;
 	return deque->at(idx);
@@ -173,8 +157,8 @@ int main(const int argc, const char **argv) {
 
 	auto ui = std::make_shared<UI>(window);
 
-	auto program = CreateShaderProgram();
-	auto debugProgram = CreateDebugShaderProgram();
+	auto program = CreateShaderProgram("default");
+	auto debugProgram = CreateShaderProgram("debug");
 
 	const GLuint uniformProj = glGetUniformLocation(program->mID, "uProj");
 	const GLuint uniformView = glGetUniformLocation(program->mID, "uView");
@@ -239,7 +223,6 @@ int main(const int argc, const char **argv) {
 	fps.mHistoryLimit = 600;
 
 	Timer<float> timer;
-
 	while (!glfwWindowShouldClose(window)) {
 		timer.Update();
 
