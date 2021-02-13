@@ -158,6 +158,7 @@ struct ParticleEntity : Entity {
 };
 
 struct Scene {
+	typedef std::function<Entity_(Scene& scene, const rapidjson::Value& cfg)> EntityConstructor;
 	std::vector<Entity_> mEntities;
 
 	float mCameraDistance = 10.0f;
@@ -166,6 +167,8 @@ struct Scene {
 
 	Entity_ mSelected;
 	size_t mSelectedIndex = -1;
+
+	Scene();
 
 	void Load(const std::string& fileName);
 
@@ -190,6 +193,11 @@ struct Scene {
 			if (entity->mName == name) return entity;
 		}
 		return nullptr;
+	}
+
+	std::map<std::string, EntityConstructor> mTypes;
+	void Register(const std::string& type, EntityConstructor constructor) {
+		mTypes[type] = constructor;
 	}
 
 	void SelectNext() {
