@@ -157,8 +157,8 @@ int main(const int argc, const char **argv) {
 
 	auto ui = std::make_shared<UI>(window);
 
-	auto program = CreateShaderProgram("default");
-	auto debugProgram = CreateShaderProgram("debug");
+	auto program = ShaderProgram::Load("default");
+	auto debugProgram = ShaderProgram::Load("debug");
 
 	const GLuint uniformProj = glGetUniformLocation(program->mID, "uProj");
 	const GLuint uniformView = glGetUniformLocation(program->mID, "uView");

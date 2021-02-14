@@ -2,10 +2,33 @@
 
 using namespace rapidjson;
 
-Entity_ CreateModelEntity(Scene& scene, const rapidjson::Value& cfg) {
-	auto model = std::make_shared<Model>();
-	auto entity = std::make_shared<ModelEntity>();
-	entity->mModel = model;
+bool ReadBool(const rapidjson::Value& cfg, const char* key, bool def = false) {
+	if (cfg.HasMember(key)) return cfg[key].GetBool();
+	return def;
+}
+
+glm::vec3 ReadVec3(const rapidjson::Value& cfg, const char* key, const glm::vec3& def = { 0,0,0 }) {
+	if (cfg.HasMember(key)) {
+		const auto& val = cfg[key].GetArray();
+		return { val[0].GetFloat(), val[1].GetFloat(), val[2].GetFloat() };
+	}
+	return def;
+}
+
+void Entity::Load(Scene& scene, const rapidjson::Value& cfg) {
+	if (cfg.HasMember("name")) mName = cfg["name"].GetString();
+	mPos = ReadVec3(cfg, "position");
+	mRot = glm::quat(ReadVec3(cfg, "rotation"));
+	mScale = ReadVec3(cfg, "scale", mScale);
+	mGravity = ReadVec3(cfg, "gravity", mGravity);
+	mUseGravity = ReadBool(cfg, "useGravity");
+	mControllable = ReadBool(cfg, "controllable");
+}
+
+void ModelEntity::Load(Scene& scene, const rapidjson::Value& cfg) {
+	Entity::Load(scene, cfg);
+	mShaderProgram = ShaderProgram::Load("default");
+	mModel = std::make_shared<Model>();
 	ModelOptions modelOptions;
 	if (cfg.HasMember("modelOptions")) {
 		const auto& opts = cfg["modelOptions"].GetObject();
@@ -13,30 +36,12 @@ Entity_ CreateModelEntity(Scene& scene, const rapidjson::Value& cfg) {
 			modelOptions.mScale = opts["scale"].GetFloat();
 		}
 	}
-	model->Load(cfg["model"].GetString(), modelOptions);
+	mModel->Load(cfg["model"].GetString(), modelOptions);
 	if (cfg.HasMember("animations")) {
 		for (const auto& anim : cfg["animations"].GetArray()) {
-			model->LoadAnimation(anim.GetString(), modelOptions, true);
+			mModel->LoadAnimation(anim.GetString(), modelOptions, true);
 		}
 	}
-	if (cfg.HasMember("name")) {
-		entity->mName = cfg["name"].GetString();
-	}
-	if (cfg.HasMember("position")) {
-		const auto& pos = cfg["position"].GetArray();
-		entity->mPos = { pos[0].GetFloat(), pos[1].GetFloat(), pos[2].GetFloat() };
-	}
-	if (cfg.HasMember("rotation")) {
-		const auto& pos = cfg["rotation"].GetArray();
-		entity->mRot = glm::quat(glm::vec3(glm::radians(pos[0].GetFloat()), glm::radians(pos[1].GetFloat()), glm::radians(pos[2].GetFloat())));
-	}
-	if (cfg.HasMember("scale")) {
-		const auto& pos = cfg["scale"].GetArray();
-		entity->mScale = { pos[0].GetFloat(), pos[1].GetFloat(), pos[2].GetFloat() };
-	}
-	entity->mControllable = cfg.HasMember("controllable") && cfg["controllable"].GetBool();
-	entity->mUseGravity = cfg.HasMember("useGravity") && cfg["useGravity"].GetBool();
-
 	if (cfg.HasMember("attachTo")) {
 		auto obj = cfg["attachTo"].GetObject();
 		auto attachTo = scene.Find(obj["name"].GetString());
@@ -44,14 +49,19 @@ Entity_ CreateModelEntity(Scene& scene, const rapidjson::Value& cfg) {
 		std::string nodeName = obj["node"].GetString();
 		auto node = attachTo->mModel->mAnimationSet->GetBoneIndex(nodeName);
 		assert(node != -1);
-		entity->mAttachTo = attachTo;
-		entity->mAttachToNode = node;
+		mAttachTo = attachTo;
+		mAttachToNode = node;
 	}
-	return entity;
+}
+
+void ParticleEntity::Load(Scene& scene, const rapidjson::Value& cfg) {
+	Entity::Load(scene, cfg);
+	mShaderProgram = ShaderProgram::Load("particle");
 }
 
 Scene::Scene() {
-	Register("model", &CreateModelEntity);
+	Register("model", []() { return std::make_shared<ModelEntity>(); });
+	Register("particle", []() { return std::make_shared<ParticleEntity>(); });
 }
 
 void Scene::Load(const std::string& fileName) {
@@ -64,7 +74,8 @@ void Scene::Load(const std::string& fileName) {
 		if (cfg.HasMember("disabled") && cfg["disabled"].GetBool()) continue;
 		auto type = cfg.HasMember("type") ? cfg["type"].GetString() : "model";
 		auto ctor = mTypes[type];
-		auto entity = ctor(*this, cfg);
+		auto entity = ctor();
+		entity->Load(*this, cfg);
 
 		if (cfg.HasMember("array")) {
 			auto arrayObj = cfg["array"].GetArray();

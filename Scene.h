@@ -2,9 +2,13 @@
 
 #include "Main.h"
 #include "Model.h"
+#include "Shader.h"
+
+struct Scene;
 
 struct Entity {
 	typedef std::shared_ptr<Entity> Entity_;
+	ShaderProgram_ mShaderProgram;
 	Model_ mModel = nullptr;
 	glm::vec3 mPos = { 0,0,0 };
 	glm::vec3 mFront = { 0,0,1 };
@@ -146,19 +150,21 @@ struct Entity {
 		//mHistoryY.push_back(-0.25f);
 		//if (mHistoryY.size() > 200) mHistoryY.pop_front();
 	}
+
+	virtual void Load(Scene& scene, const rapidjson::Value& cfg);
 };
 typedef std::shared_ptr<Entity> Entity_;
 
 struct ModelEntity : Entity {
-
+	virtual void Load(Scene& scene, const rapidjson::Value& cfg);
 };
 
 struct ParticleEntity : Entity {
-
+	virtual void Load(Scene& scene, const rapidjson::Value& cfg);
 };
 
 struct Scene {
-	typedef std::function<Entity_(Scene& scene, const rapidjson::Value& cfg)> EntityConstructor;
+	typedef std::function<Entity_()> EntityConstructor;
 	std::vector<Entity_> mEntities;
 
 	float mCameraDistance = 10.0f;
