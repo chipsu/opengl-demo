@@ -79,26 +79,6 @@ struct Camera {
 	}
 };
 
-size_t gMeshCounter = 0;
-
-void RenderNode(GLint uniformModel, ModelNode_ node, const glm::mat4& parentTransform) {
-	glm::mat4 transform = parentTransform * node->mTransform;
-	bool transformSet = false;
-	for (auto& mesh : node->mMeshes) {
-		if (mesh->mHidden) continue;
-		if (!transformSet) {
-			glUniformMatrix4fv(uniformModel, 1, GL_FALSE, (GLfloat*)&transform[0]);
-			transformSet = true;
-		}
-		mesh->Bind();
-		glDrawElements(GL_TRIANGLES, mesh->mIndices.size(), GL_UNSIGNED_INT, 0);
-		gMeshCounter++;
-	}
-	for (auto& childNode : node->mChildren) {
-		RenderNode(uniformModel, childNode, transform);
-	}
-};
-
 struct DebugLine {
 	glm::vec3 mStart;
 	glm::vec3 mEnd;
@@ -157,16 +137,7 @@ int main(const int argc, const char **argv) {
 
 	auto ui = std::make_shared<UI>(window);
 
-	auto program = ShaderProgram::Load("default");
 	auto debugProgram = ShaderProgram::Load("debug");
-
-	const GLuint uniformProj = glGetUniformLocation(program->mID, "uProj");
-	const GLuint uniformView = glGetUniformLocation(program->mID, "uView");
-	const GLuint uniformModel = glGetUniformLocation(program->mID, "uModel");
-	const GLuint uniformBones = glGetUniformLocation(program->mID, "uBones");
-	const GLuint uLightPos = glGetUniformLocation(program->mID, "uLightPos");
-	const GLuint uViewPos = glGetUniformLocation(program->mID, "uViewPos");
-	const GLuint uLightColor = glGetUniformLocation(program->mID, "uLightColor");
 	
 	bool autoBlend = false;
 	bool animDetails = false;
@@ -236,7 +207,7 @@ int main(const int argc, const char **argv) {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glEnable(GL_DEPTH_TEST);
 
-		glUseProgram(program->mID);
+		//glUseProgram(program->mID);
 
 		glfwPollEvents();
 
@@ -472,26 +443,30 @@ int main(const int argc, const char **argv) {
 
 		scene->Update(timer.mNow, timer.mDelta);
 
-		glUniformMatrix4fv(uniformProj, 1, GL_FALSE, (GLfloat*)&cam.mProjection[0]);
-		glUniformMatrix4fv(uniformView, 1, GL_FALSE, (GLfloat*)&cam.mView[0]);
-		glUniform3fv(uViewPos, 1, (GLfloat*)&cam.mPos[0]);
-		glUniform3fv(uLightPos, 1, (GLfloat*)&lightPos[0]);
-		glUniform3fv(uLightColor, 1, (GLfloat*)&lightColor[0]);
-
-		gMeshCounter = 0;
+		ShaderProgram_ shaderProgram = nullptr;
 		for (auto& entity : scene->mEntities) {
 			const auto& model = entity->mModel;
 			if (!model) continue;
-			if (entity->mAnimationController) {
+			if (entity->mShaderProgram != shaderProgram) {
+				shaderProgram = entity->mShaderProgram;
+				glUseProgram(shaderProgram->mID);
+				glUniformMatrix4fv(shaderProgram->uProj, 1, GL_FALSE, (GLfloat*)&cam.mProjection[0]);
+				glUniformMatrix4fv(shaderProgram->uView, 1, GL_FALSE, (GLfloat*)&cam.mView[0]);
+				glUniform3fv(shaderProgram->uViewPos, 1, (GLfloat*)&cam.mPos[0]);
+				glUniform3fv(shaderProgram->uLightPos, 1, (GLfloat*)&lightPos[0]);
+				glUniform3fv(shaderProgram->uLightColor, 1, (GLfloat*)&lightColor[0]);
+				glUniform1f(shaderProgram->uTime, timer.mNow);
+			}
+			if (entity->mAnimationController && shaderProgram->uBones) {
 				const auto& bones = entity->mAnimationController->mFinalTransforms;
-				glUniformMatrix4fv(uniformBones, bones.size(), GL_FALSE, (GLfloat*)&bones[0]);
+				glUniformMatrix4fv(entity->mShaderProgram->uBones, bones.size(), GL_FALSE, (GLfloat*)&bones[0]);
 			}
 			for (auto& modelMesh : model->mMeshes) {
 				if (modelMesh->mMesh->mHidden) continue;
 				glm::mat4 meshTransform = entity->mTransform * modelMesh->mTransform;
-				glUniformMatrix4fv(uniformModel, 1, GL_FALSE, (GLfloat*)&meshTransform[0]);
+				glUniformMatrix4fv(shaderProgram->uModel, 1, GL_FALSE, (GLfloat*)&meshTransform[0]);
 				modelMesh->mMesh->Bind();
-				glDrawElements(GL_TRIANGLES, modelMesh->mMesh->mIndices.size(), GL_UNSIGNED_INT, 0);
+				glDrawElements(modelMesh->mMesh->mMode, modelMesh->mMesh->mIndices.size(), GL_UNSIGNED_INT, 0);
 			}
 		}
 
@@ -550,7 +525,6 @@ int main(const int argc, const char **argv) {
 
 	input.reset();
 	scene.reset();
-	program.reset();
 
 	glfwTerminate();
 	return 0;

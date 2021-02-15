@@ -12,6 +12,7 @@ struct Mesh {
 	GLuint mVertexArray = 0;
 	bool mHidden = false;
 	AABB mAABB;
+	GLuint mMode = GL_TRIANGLES;
 
 	Mesh(const Mesh&) = delete;
 	Mesh& operator=(const Mesh&) = delete;

@@ -45,6 +45,14 @@ struct ShaderProgram {
 	typedef std::shared_ptr<ShaderProgram> ShaderProgram_;
 	static std::map<std::string, ShaderProgram_> sShaderPrograms;
 	GLuint mID = 0;
+	GLuint uProj;
+	GLuint uView;
+	GLuint uModel;
+	GLuint uBones;
+	GLuint uLightPos;
+	GLuint uViewPos;
+	GLuint uLightColor;
+	GLuint uTime;
 
 	ShaderProgram(const std::vector<Shader_>& shaders) {
 		mID = glCreateProgram();
@@ -67,6 +75,15 @@ struct ShaderProgram {
 		for (auto& shader : shaders) {
 			glDetachShader(mID, shader->mID);
 		}
+
+		uProj = glGetUniformLocation(mID, "uProj");
+		uView = glGetUniformLocation(mID, "uView");
+		uModel = glGetUniformLocation(mID, "uModel");
+		uBones = glGetUniformLocation(mID, "uBones");
+		uLightPos = glGetUniformLocation(mID, "uLightPos");
+		uViewPos = glGetUniformLocation(mID, "uViewPos");
+		uLightColor = glGetUniformLocation(mID, "uLightColor");
+		uTime = glGetUniformLocation(mID, "uTime");
 	}
 	~ShaderProgram() {
 		glDeleteProgram(mID);
