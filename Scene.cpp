@@ -80,6 +80,23 @@ void ParticleEntity::Load(Scene& scene, const rapidjson::Value& cfg) {
 	mModel->mMeshes.push_back(std::make_shared<ModelMesh>(mesh, glm::identity<glm::mat4>()));
 }
 
+void ParticleEntity::Update(float absoluteTime, float deltaTime) {
+	Entity::Update(absoluteTime, deltaTime);
+	auto mesh = mModel->mMeshes[0]->mMesh;
+	float s = 2.0f * sin(absoluteTime);
+	int a = 0;
+	for (float r = -3.14f; r < 3.14f; r += 3.14f / 8.0f) {
+		float x = cos(r + absoluteTime) * s;
+		float y = sin(r + absoluteTime) * s;
+		for (int v = 0; v < 6; ++v) {
+			auto& vertex = mesh->mVertices[a + v];
+			vertex.mNormal = { x,y,0 };
+		}
+		a += 6;
+	}
+	mesh->mVertexBufferDirty = true;
+}
+
 Scene::Scene() {
 	Register("model", []() { return std::make_shared<ModelEntity>(); });
 	Register("particle", []() { return std::make_shared<ParticleEntity>(); });

@@ -117,7 +117,7 @@ struct Entity {
 		mForce = { 0,0,0 };
 	}
 	
-	void Update(float absoluteTime, float deltaTime) {
+	virtual void Update(float absoluteTime, float deltaTime) {
 		if (mAnimationController) {
 			mAnimationController->Update(absoluteTime);
 		}
@@ -161,6 +161,7 @@ struct ModelEntity : Entity {
 
 struct ParticleEntity : Entity {
 	virtual void Load(Scene& scene, const rapidjson::Value& cfg);
+	virtual void Update(float absoluteTime, float deltaTime);
 };
 
 struct Scene {

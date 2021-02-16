@@ -10,6 +10,7 @@ struct Mesh {
 	GLuint mVertexBuffer = 0;
 	GLuint mIndexBuffer = 0;
 	GLuint mVertexArray = 0;
+	bool mVertexBufferDirty = true;
 	bool mHidden = false;
 	AABB mAABB;
 	GLuint mMode = GL_TRIANGLES;
@@ -23,8 +24,9 @@ struct Mesh {
 		if (mVertexArray) glDeleteVertexArrays(1, &mVertexArray);
 	}
 	void Bind() {
-		if (!mVertexBuffer) {
+		if (mVertexBufferDirty) {
 			UpdateVertexBuffer();
+			mVertexBufferDirty = false;
 		}
 		if (!mIndexBuffer) {
 			UpdateIndexBuffer();
