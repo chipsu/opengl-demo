@@ -128,9 +128,12 @@ struct Entity {
 		mTransform = glm::translate(glm::identity<glm::mat4>(), pos);
 		mTransform *= glm::mat4_cast(rot);
 		mTransform = glm::scale(mTransform, mScale);
-		if (mAttachTo && mAttachToNode != -1) {
-			//mTransform = glm::translate(mTransform, glm::vec3(-1.5f, 0, 1.9f)); // FIXME: where/how do we get this offset?
-			mTransform = mAttachTo->mTransform * mAttachTo->mAnimationController->mLocalTransforms[mAttachToNode] * mTransform; // FIXME: can be 1 frame behind
+		if (mAttachTo) {
+			if (mAttachToNode != -1) {
+				mTransform = mAttachTo->mTransform * mAttachTo->mAnimationController->mLocalTransforms[mAttachToNode] * mTransform; // FIXME: can be 1 frame behind
+			} else {
+				mTransform = mAttachTo->mTransform * mTransform;
+			}
 		}
 	}
 

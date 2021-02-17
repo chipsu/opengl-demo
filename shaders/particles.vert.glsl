@@ -15,13 +15,16 @@ void main() {
     //vec3 offset  = inPosition + inNormal * uTime * 0.1;
 
 	// TODO: use custom vertex format for particles
-	float scale = 1.0f;
-	vec3 center = inNormal;
-	vec3 camRight = vec3(uView[0][0], uView[1][0], uView[2][0]);
-	vec3 camUp = vec3(uView[0][1], uView[1][1], uView[2][1]);
-	vec3 pos = center + camRight * inPosition.x * scale + camUp * inPosition.y * scale;
+	float scale = inNormal.z;
+	vec3 center = inPosition;
+	mat4 viewModel = uView * uModel;
+	vec3 camRight = vec3(viewModel[0][0], viewModel[1][0], viewModel[2][0]);
+	vec3 camUp = vec3(viewModel[0][1], viewModel[1][1], viewModel[2][1]);
+	vec3 pos = center
+			 + camRight * inNormal.x * scale
+			 + camUp * inNormal.y * scale;
 
-	gl_Position = uProj * uView * uModel * vec4(pos, 1.0f);
-    
-    outColor = vec3(1,0,0);
+    gl_Position = uProj * uView * uModel * vec4(pos, 1.0);
+
+    outColor = pos;
 }

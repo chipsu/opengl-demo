@@ -459,7 +459,7 @@ int main(const int argc, const char **argv) {
 			}
 			if (entity->mAnimationController && shaderProgram->uBones) {
 				const auto& bones = entity->mAnimationController->mFinalTransforms;
-				glUniformMatrix4fv(entity->mShaderProgram->uBones, bones.size(), GL_FALSE, (GLfloat*)&bones[0]);
+				glUniformMatrix4fv(shaderProgram->uBones, bones.size(), GL_FALSE, (GLfloat*)&bones[0]);
 			}
 			for (auto& modelMesh : model->mMeshes) {
 				if (modelMesh->mMesh->mHidden) continue;

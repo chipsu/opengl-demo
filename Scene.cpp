@@ -18,11 +18,26 @@ glm::vec3 ReadVec3(const rapidjson::Value& cfg, const char* key, const glm::vec3
 void Entity::Load(Scene& scene, const rapidjson::Value& cfg) {
 	if (cfg.HasMember("name")) mName = cfg["name"].GetString();
 	mPos = ReadVec3(cfg, "position");
-	mRot = glm::quat(ReadVec3(cfg, "rotation"));
+	mRot = glm::quat(glm::radians(ReadVec3(cfg, "rotation")));
 	mScale = ReadVec3(cfg, "scale", mScale);
 	mGravity = ReadVec3(cfg, "gravity", mGravity);
 	mUseGravity = ReadBool(cfg, "useGravity");
 	mControllable = ReadBool(cfg, "controllable");
+	if (cfg.HasMember("attachTo")) {
+		auto obj = cfg["attachTo"].GetObject();
+		std::string entityName = obj["name"].GetString();
+		mAttachTo = scene.Find(entityName);
+		if (!mAttachTo) {
+			std::cerr << "Warning: Entity " << entityName << " not found" << std::endl;
+		}
+		if (mAttachTo && obj.HasMember("node")) {
+			std::string nodeName = obj["node"].GetString();
+			mAttachToNode = mAttachTo->mModel->mAnimationSet->GetBoneIndex(nodeName);
+			if (mAttachToNode == -1) {
+				std::cerr << "Warning: Node " << nodeName << " not found" << std::endl;
+			}
+		}
+	}
 }
 
 void ModelEntity::Load(Scene& scene, const rapidjson::Value& cfg) {
@@ -42,16 +57,6 @@ void ModelEntity::Load(Scene& scene, const rapidjson::Value& cfg) {
 			mModel->LoadAnimation(anim.GetString(), modelOptions, true);
 		}
 	}
-	if (cfg.HasMember("attachTo")) {
-		auto obj = cfg["attachTo"].GetObject();
-		auto attachTo = scene.Find(obj["name"].GetString());
-		assert(nullptr != attachTo);
-		std::string nodeName = obj["node"].GetString();
-		auto node = attachTo->mModel->mAnimationSet->GetBoneIndex(nodeName);
-		assert(node != -1);
-		mAttachTo = attachTo;
-		mAttachToNode = node;
-	}
 }
 
 void ParticleEntity::Load(Scene& scene, const rapidjson::Value& cfg) {
@@ -70,9 +75,10 @@ void ParticleEntity::Load(Scene& scene, const rapidjson::Value& cfg) {
 		float y = sin(r) * s;
 		for (int v = 0; v < 12; v += 2) {
 			Vertex vertex;
-			vertex.mPos.x = (quad[v] - 0.5f) * ps;
-			vertex.mPos.y = (quad[v + 1] - 0.5f) * ps;
-			vertex.mNormal = { x,y,0 };
+			vertex.mPos = { x, y, 0 };
+			vertex.mNormal.x = (quad[v] - 0.5f) * ps;
+			vertex.mNormal.y = (quad[v + 1] - 0.5f) * ps;
+			vertex.mNormal.z = 1.0f;
 			mesh->mVertices.push_back(vertex);
 			mesh->mIndices.push_back(mesh->mIndices.size());
 		}
@@ -82,7 +88,7 @@ void ParticleEntity::Load(Scene& scene, const rapidjson::Value& cfg) {
 
 void ParticleEntity::Update(float absoluteTime, float deltaTime) {
 	Entity::Update(absoluteTime, deltaTime);
-	auto mesh = mModel->mMeshes[0]->mMesh;
+	auto& mesh = mModel->mMeshes[0]->mMesh;
 	float s = 2.0f * sin(absoluteTime);
 	int a = 0;
 	for (float r = -3.14f; r < 3.14f; r += 3.14f / 8.0f) {
@@ -90,7 +96,7 @@ void ParticleEntity::Update(float absoluteTime, float deltaTime) {
 		float y = sin(r + absoluteTime) * s;
 		for (int v = 0; v < 6; ++v) {
 			auto& vertex = mesh->mVertices[a + v];
-			vertex.mNormal = { x,y,0 };
+			vertex.mPos = { x, y, 0 };
 		}
 		a += 6;
 	}
