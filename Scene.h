@@ -29,7 +29,7 @@ struct Entity {
 	Entity(Model_ model) : mModel(model) {}
 	Entity(Model_ model, const glm::vec3& pos) : mModel(model), mPos(pos) {}
 
-	Entity_ Clone() const {
+	virtual Entity_ Clone() const {
 		auto clone = std::make_shared<Entity>();
 		clone->mModel = mModel;
 		clone->mPos = mPos;
@@ -43,7 +43,7 @@ struct Entity {
 		return clone;
 	}
 
-	void Init() {
+	virtual void Init() {
 		if (mModel && mModel->mAnimationSet) {
 			mAnimationController = std::make_shared<AnimationController>(mModel->mAnimationSet);
 		}
