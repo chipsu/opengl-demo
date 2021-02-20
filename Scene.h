@@ -163,6 +163,7 @@ struct ModelEntity : Entity {
 };
 
 struct ParticleEntity : Entity {
+	virtual void Init();
 	virtual void Load(Scene& scene, const rapidjson::Value& cfg);
 	virtual void Update(float absoluteTime, float deltaTime);
 };

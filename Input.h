@@ -8,6 +8,8 @@ struct Input {
 	GLFWwindow* mWindow;
 	Scene_ mScene;
 	size_t mDebugMesh = 0;
+	float mNow = 0;
+	float mDelta = 0;
 
 	Input(GLFWwindow* window, Scene_ scene) : mWindow(window), mScene(scene) {
 		sInstance = this;
@@ -58,6 +60,7 @@ struct Input {
 		//}
 	}
 
+	float mLastCast = 0;
 	void OnKey(GLFWwindow* window, int key, int scancode, int action, int mods) {
 		if (false) printf("key_callback: %d %d %d\n", key, action, mods);
 		if (action == GLFW_RELEASE) {
@@ -79,6 +82,16 @@ struct Input {
 					animationController->SetAnimationIndex(animationIndex);
 					const auto animation = animationController->GetAnimation();
 					std::cout << "Animation: " << animationIndex << ", " << (animation ? animation->mName : "DISABLED") << std::endl;
+				}
+				if (mLastCast + 1.0f < mNow && key == GLFW_KEY_1) {
+					auto spawn = std::make_shared<ParticleEntity>();
+					spawn->mPos = entity->mPos;
+					spawn->mRot = entity->mRot;
+					spawn->mForce = entity->mFront * 10.0f - entity->mGravity * 2.0f;
+					spawn->mUseGravity = true;
+					spawn->Init();
+					mScene->mEntities.push_back(spawn);
+					mLastCast = mNow;
 				}
 			}
 			if (key == GLFW_KEY_TAB) {

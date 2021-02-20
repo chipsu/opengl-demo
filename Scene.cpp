@@ -59,8 +59,9 @@ void ModelEntity::Load(Scene& scene, const rapidjson::Value& cfg) {
 	}
 }
 
-void ParticleEntity::Load(Scene& scene, const rapidjson::Value& cfg) {
-	Entity::Load(scene, cfg);
+void ParticleEntity::Init() {
+	Entity::Init();
+
 	mShaderProgram = ShaderProgram::Load("particles");
 	mModel = std::make_shared<Model>();
 	auto mesh = std::make_shared<Mesh>();
@@ -70,7 +71,7 @@ void ParticleEntity::Load(Scene& scene, const rapidjson::Value& cfg) {
 		0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f,
 		0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f,
 	};
-	for (float r = -3.14f; r < 3.14f; r += 3.14f/8.0f) {
+	for (float r = -3.14f; r < 3.14f; r += 3.14f / 8.0f) {
 		float x = cos(r) * s;
 		float y = sin(r) * s;
 		for (int v = 0; v < 12; v += 2) {
@@ -84,6 +85,10 @@ void ParticleEntity::Load(Scene& scene, const rapidjson::Value& cfg) {
 		}
 	}
 	mModel->mMeshes.push_back(std::make_shared<ModelMesh>(mesh, glm::identity<glm::mat4>()));
+}
+
+void ParticleEntity::Load(Scene& scene, const rapidjson::Value& cfg) {
+	Entity::Load(scene, cfg);
 }
 
 void ParticleEntity::Update(float absoluteTime, float deltaTime) {

@@ -196,6 +196,8 @@ int main(const int argc, const char **argv) {
 	Timer<float> timer;
 	while (!glfwWindowShouldClose(window)) {
 		timer.Update();
+		input->mNow = timer.mNow;
+		input->mDelta = timer.mDelta;
 
 		if (fps.Tick(timer.mNow, timer.mDelta)) {
 			glfwSetWindowTitle(window, (windowTitle + " - FPS: " + std::to_string(fps.mValue)).c_str());
