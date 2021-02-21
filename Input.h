@@ -84,10 +84,11 @@ struct Input {
 					std::cout << "Animation: " << animationIndex << ", " << (animation ? animation->mName : "DISABLED") << std::endl;
 				}
 				if (mLastCast + 1.0f < mNow && key == GLFW_KEY_1) {
-					auto spawn = std::make_shared<ParticleEntity>();
+					//auto spawn = std::make_shared<ParticleEntity>();
+					auto spawn = mScene->Find("sword")->Clone();
 					spawn->mPos = entity->mPos;
 					spawn->mRot = entity->mRot;
-					spawn->mForce = entity->mFront * 10.0f - entity->mGravity * 2.0f;
+					spawn->mForce = entity->mFront * 100.0f - entity->mGravity * 2.0f;
 					spawn->mUseGravity = true;
 					spawn->Init();
 					mScene->mEntities.push_back(spawn);

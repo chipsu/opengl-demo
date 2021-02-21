@@ -31,6 +31,7 @@ struct Entity {
 
 	virtual Entity_ Clone() const {
 		auto clone = std::make_shared<Entity>();
+		clone->mShaderProgram = mShaderProgram;
 		clone->mModel = mModel;
 		clone->mPos = mPos;
 		clone->mFront = mFront;
