@@ -86,14 +86,13 @@ struct DebugLine {
 };
 
 struct DebugPoint {
-	glm::mat4 mTransform;
+	glm::vec3 mPos;
 	glm::vec3 mColor = { 1,1,1 };
-	DebugPoint() {}
-	DebugPoint(const glm::mat4& t) : mTransform(t) {}
-	DebugPoint(float x, float y, float z, float s = 0.01f) : DebugPoint(glm::vec3(x, y, z), s) {}
-	DebugPoint(const glm::vec3& p, float s = 0.01f) {
-		mTransform = glm::translate(glm::identity<glm::mat4>(), p);
-		mTransform = glm::scale(mTransform, glm::vec3(s, s, s));
+	float mScale = 1.0f;
+	DebugPoint(float x, float y, float z, float s = 1.0f) : DebugPoint(glm::vec3(x, y, z), s) {}
+	DebugPoint(const glm::vec3& p, float s = 1.0f) {
+		mPos = p;
+		mScale = s;
 	}
 };
 
@@ -138,6 +137,7 @@ int main(const int argc, const char **argv) {
 	auto ui = std::make_shared<UI>(window);
 
 	auto debugProgram = ShaderProgram::Load("debug");
+	auto debugPointProgram = ShaderProgram::Load("particles");
 	
 	bool autoBlend = false;
 	bool animDetails = false;
@@ -162,27 +162,6 @@ int main(const int argc, const char **argv) {
 		persistentDebugLines.push_back({ {dx * gridScale, 0, -gridHalfSize * gridScale}, {dx * gridScale, 0, gridHalfSize * gridScale}, {.5f, .5f, .5f} });
 		persistentDebugLines.push_back({ {-gridHalfSize * gridScale, 0, dx * gridScale}, {gridHalfSize * gridScale, 0, dx * gridScale}, {.5f, .5f, .5f} });
 	}
-
-	auto debugCube = std::make_shared<Mesh>();
-	for (int debugCubeZ = 1; debugCubeZ >= -1; debugCubeZ -= 2) {
-		debugCube->mVertices.push_back({ { -1, -1, debugCubeZ }, {}, { +1, +1, +1 } });
-		debugCube->mVertices.push_back({ { +1, -1, debugCubeZ }, {}, { +1, +1, +1 } });
-		debugCube->mVertices.push_back({ { +1, +1, debugCubeZ }, {}, { +1, +1, +1 } });
-		debugCube->mVertices.push_back({ { -1, +1, debugCubeZ }, {}, { +1, +1, +1 } });
-	}
-	debugCube->mIndices.push_back(0);
-	debugCube->mIndices.push_back(1);
-	debugCube->mIndices.push_back(2);
-	debugCube->mIndices.push_back(3);
-	debugCube->mIndices.push_back(0);
-	debugCube->mIndices.push_back(2);
-
-	/*debugCube->mIndices.push_back(4);
-	debugCube->mIndices.push_back(5);
-	debugCube->mIndices.push_back(6);
-	debugCube->mIndices.push_back(7);
-	debugCube->mIndices.push_back(4);
-	debugCube->mIndices.push_back(6);*/
 
 	Camera cam;
 	cam.mRight = glm::normalize(glm::cross(cam.mUp, cam.mFront));
@@ -282,6 +261,7 @@ int main(const int argc, const char **argv) {
 			debugLines.push_back({ selected->mPos, selected->mPos + cam.mFront, { 1, 1, 1 } });
 			debugLines.push_back({ selected->mPos, selected->mPos + selected->mFront, { 1, 0, 0 } });
 			debugLines.push_back({ selected->mPos, selected->mPos + selected->mUp, { 0, 1, 0 } });
+			debugPoints.push_back(DebugPoint(selected->mPos));
 		}
 
 		ui->NewFrame();
@@ -429,14 +409,6 @@ int main(const int argc, const char **argv) {
 			}
 
 			ImGui::End();
-
-			/*if (enableDebug) {
-				const auto transforms = ac->mLocalTransforms;
-				for (const auto t : transforms) {
-					auto t2 = glm::scale(t, glm::vec3(0.1f, 0.1f, 0.1f));
-					debugPoints.push_back(DebugPoint(t2));
-				}
-			}*/
 		}
 
 		//cam.mView = glm::lookAt(glm::vec3(4.0f,4.0f,4.0f), glm::vec3(0.0f,2.0f,0.0f), glm::vec3(0.0f,1.0f,0.0f));
@@ -505,16 +477,35 @@ int main(const int argc, const char **argv) {
 			}
 
 			if (drawDebug) {
-				debugPoints.push_back(DebugPoint(0, 0, 0));
-
-				debugCube->Bind();
-				for (auto& debugPoint : debugPoints) {
-					glUniformMatrix4fv(glGetUniformLocation(debugProgram->mID, "uModel"), 1, GL_FALSE, (GLfloat*)&debugPoint.mTransform[0]);
-					glDrawElements(GL_TRIANGLES, debugCube->mIndices.size(), GL_UNSIGNED_INT, 0);
-				}
-
 				glDisable(GL_DEPTH_TEST);
 				drawDebugLines(debugLines);
+
+				glUseProgram(debugPointProgram->mID);
+				glUniformMatrix4fv(glGetUniformLocation(debugPointProgram->mID, "uProj"), 1, GL_FALSE, (GLfloat*)&cam.mProjection[0]);
+				glUniformMatrix4fv(glGetUniformLocation(debugPointProgram->mID, "uView"), 1, GL_FALSE, (GLfloat*)&cam.mView[0]);
+				glUniformMatrix4fv(glGetUniformLocation(debugPointProgram->mID, "uModel"), 1, GL_FALSE, (GLfloat*)&debugTransform[0]);
+
+				debugPoints.push_back(DebugPoint(0, 0, 0));
+
+				auto debugMesh = std::make_shared<Mesh>();
+				for (auto& debugPoint : debugPoints) {
+					float ps = 0.25f;
+					float quad[] = {
+						0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f,
+						0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f,
+					};
+					for (int v = 0; v < 12; v += 2) {
+						Vertex vertex;
+						vertex.mPos = debugPoint.mPos;
+						vertex.mNormal.x = (quad[v] - 0.5f) * ps;
+						vertex.mNormal.y = (quad[v + 1] - 0.5f) * ps;
+						vertex.mNormal.z = debugPoint.mScale;
+						debugMesh->mVertices.push_back(vertex);
+						debugMesh->mIndices.push_back(debugMesh->mIndices.size());
+					}
+				}
+				debugMesh->Bind();
+				glDrawElements(GL_TRIANGLES, debugMesh->mIndices.size(), GL_UNSIGNED_INT, 0);
 			}
 		}
 		debugLines.clear();
@@ -522,8 +513,6 @@ int main(const int argc, const char **argv) {
 
 		ui->Render();
 	}
-
-	debugCube = nullptr;
 
 	input.reset();
 	scene.reset();
