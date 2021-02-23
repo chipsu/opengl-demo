@@ -6,3 +6,4 @@ glad/0.1.34
 assimp/5.0.1
 imgui/1.79
 rapidjson/cci.20200410
+bullet3/3.07

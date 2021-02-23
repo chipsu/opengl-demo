@@ -111,6 +111,13 @@ void ParticleEntity::Update(float absoluteTime, float deltaTime) {
 Scene::Scene() {
 	Register("model", []() { return std::make_shared<ModelEntity>(); });
 	Register("particle", []() { return std::make_shared<ParticleEntity>(); });
+
+	auto cc = new btDefaultCollisionConfiguration();
+	auto dispatcher = new btCollisionDispatcher(cc);
+	auto opc = new btDbvtBroadphase();
+	auto solver = new btSequentialImpulseConstraintSolver();
+	mDynamicsWorld = new btDiscreteDynamicsWorld(dispatcher, opc, solver, cc);
+	mDynamicsWorld->setGravity(btVector3(0, -10, 0));
 }
 
 void Scene::Load(const std::string& fileName) {

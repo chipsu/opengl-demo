@@ -3,6 +3,7 @@
 #include "Main.h"
 #include "Model.h"
 #include "Shader.h"
+#include "btBulletDynamicsCommon.h"
 
 struct Scene;
 
@@ -173,6 +174,8 @@ struct Scene {
 	typedef std::function<Entity_()> EntityConstructor;
 	std::vector<Entity_> mEntities;
 
+	btDiscreteDynamicsWorld* mDynamicsWorld = nullptr;
+
 	float mCameraDistance = 10.0f;
 	float mCameraRotationX = 0.0f;
 	float mCameraRotationY = 0.0f;
@@ -191,7 +194,14 @@ struct Scene {
 		SelectNext();
 	}
 
+	float mAccum = 0.0f;
+	float mStep = 1.0f / 60.0;
 	void Update(float absoluteTime, float deltaTime) {
+		mAccum += deltaTime;
+		while (mAccum >= mStep) {
+			mDynamicsWorld->stepSimulation(mStep);
+			mAccum -= mStep;
+		}
 		/*std::for_each(std::execution::par, mEntities.begin(), mEntities.end(), [absoluteTime, deltaTime](auto& entity) {
 			entity->Update(absoluteTime, deltaTime);
 		});*/
