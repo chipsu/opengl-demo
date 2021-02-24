@@ -15,6 +15,26 @@ glm::vec3 ReadVec3(const rapidjson::Value& cfg, const char* key, const glm::vec3
 	return def;
 }
 
+
+void Entity::Init(Scene& scene) {
+	if (mModel && mModel->mAnimationSet) {
+		mAnimationController = std::make_shared<AnimationController>(mModel->mAnimationSet);
+	}
+	mPrevPos = mPos;
+	mPrevRot = mRot;
+}
+
+struct EntityMotionState : public virtual btMotionState {
+	Entity* mEntity = nullptr;
+	EntityMotionState(Entity* entity) : mEntity(entity) {}
+	virtual void getWorldTransform(btTransform& worldTrans) const {
+		worldTrans.setFromOpenGLMatrix((const btScalar*)&mEntity->mTransform[0]);
+	}
+	virtual void setWorldTransform(const btTransform& worldTrans) {
+		worldTrans.getOpenGLMatrix((btScalar*)&mEntity->mTransform[0]);
+	}
+};
+
 void Entity::Load(Scene& scene, const rapidjson::Value& cfg) {
 	if (cfg.HasMember("name")) mName = cfg["name"].GetString();
 	mPos = ReadVec3(cfg, "position");
@@ -38,6 +58,13 @@ void Entity::Load(Scene& scene, const rapidjson::Value& cfg) {
 			}
 		}
 	}
+	if (cfg.HasMember("rigidBody")) {
+		//auto obj = cfg["rigidBody"].GetObject();
+		auto ms = new EntityMotionState(this);
+		auto cs = new btBoxShape(btVector3(1, 1, 1));
+		mRigidBody = new btRigidBody(10.0f, ms, cs);
+		scene.mDynamicsWorld->addRigidBody(mRigidBody);
+	}
 }
 
 void ModelEntity::Load(Scene& scene, const rapidjson::Value& cfg) {
@@ -59,8 +86,8 @@ void ModelEntity::Load(Scene& scene, const rapidjson::Value& cfg) {
 	}
 }
 
-void ParticleEntity::Init() {
-	Entity::Init();
+void ParticleEntity::Init(Scene& scene) {
+	Entity::Init(scene);
 
 	mShaderProgram = ShaderProgram::Load("particles");
 	mModel = std::make_shared<Model>();
@@ -118,6 +145,16 @@ Scene::Scene() {
 	auto solver = new btSequentialImpulseConstraintSolver();
 	mDynamicsWorld = new btDiscreteDynamicsWorld(dispatcher, opc, solver, cc);
 	mDynamicsWorld->setGravity(btVector3(0, -10, 0));
+
+	auto groundShape = new btBoxShape(btVector3(100.0f, 0.1f, 100.0f));
+	btTransform groundTransform;
+	groundTransform.setIdentity();
+	groundTransform.setOrigin(btVector3(0, -0.1f, 0));
+	auto groundMS = new btDefaultMotionState(groundTransform);
+	auto ground = new btRigidBody(0.0f, groundMS, groundShape);
+	ground->forceActivationState(DISABLE_DEACTIVATION);
+	ground->setCollisionFlags(btCollisionObject::CF_KINEMATIC_OBJECT | btCollisionObject::CF_STATIC_OBJECT);
+	mDynamicsWorld->addRigidBody(ground);
 }
 
 void Scene::Load(const std::string& fileName) {

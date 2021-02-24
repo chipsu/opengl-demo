@@ -90,7 +90,7 @@ struct Input {
 					spawn->mRot = entity->mRot;
 					spawn->mForce = entity->mFront * 100.0f - entity->mGravity * 2.0f;
 					spawn->mUseGravity = true;
-					spawn->Init();
+					spawn->Init(*mScene);
 					mScene->mEntities.push_back(spawn);
 					mLastCast = mNow;
 				}

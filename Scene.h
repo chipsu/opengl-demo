@@ -26,6 +26,8 @@ struct Entity {
 	std::string mName;
 	Entity_ mAttachTo;
 	uint32_t mAttachToNode = -1;
+	btRigidBody* mRigidBody = nullptr;
+
 	Entity() {}
 	Entity(Model_ model) : mModel(model) {}
 	Entity(Model_ model, const glm::vec3& pos) : mModel(model), mPos(pos) {}
@@ -45,13 +47,7 @@ struct Entity {
 		return clone;
 	}
 
-	virtual void Init() {
-		if (mModel && mModel->mAnimationSet) {
-			mAnimationController = std::make_shared<AnimationController>(mModel->mAnimationSet);
-		}
-		mPrevPos = mPos;
-		mPrevRot = mRot;
-	}
+	virtual void Init(Scene& scene);
 
 	glm::vec3 mForce = { 0,0,0 };
 	float mMass = 1.0f;
@@ -123,6 +119,7 @@ struct Entity {
 		if (mAnimationController) {
 			mAnimationController->Update(absoluteTime);
 		}
+		if (mRigidBody) return;
 		UpdatePhysics(deltaTime);
 		auto lp = std::min(deltaTime, 1.0f);
 		auto pos = glm::lerp(mPrevPos, mPos, lp);
@@ -148,6 +145,11 @@ struct Entity {
 	}
 
 	void Jump() {
+		if (mRigidBody) {
+			std::cout << "JumpJumpJump!" << std::endl;
+			mRigidBody->applyCentralForce(btVector3(0, 100, 0));
+			return;
+		}
 		if (!mGrounded) return;
 		std::cout << "JumpJumpJump!" << std::endl;
 		mForce = mGravity * -2.0f;
@@ -165,7 +167,7 @@ struct ModelEntity : Entity {
 };
 
 struct ParticleEntity : Entity {
-	virtual void Init();
+	virtual void Init(Scene& scene);
 	virtual void Load(Scene& scene, const rapidjson::Value& cfg);
 	virtual void Update(float absoluteTime, float deltaTime);
 };
@@ -189,7 +191,7 @@ struct Scene {
 
 	void Init() {
 		for (auto& entity : mEntities) {
-			entity->Init();
+			entity->Init(*this);
 		}
 		SelectNext();
 	}
