@@ -199,37 +199,48 @@ int main(const int argc, const char **argv) {
 		auto selected = scene->mSelected;
 		if (nullptr != selected) {
 			movementSpeed = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) ? 10.0f : 2.0f;
+			float walk = 0;
+			float strafe = 0;
 
-			if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+			if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+				walk = movementSpeed;
+			if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+				walk = -movementSpeed;
+			if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+				strafe = -movementSpeed;
+			if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+				strafe = movementSpeed;
+
+			if (walk != 0) {
 				auto targetFront = glm::cross(cam.mRight, selected->mUp);
 				targetFront = glm::normalize(targetFront);
 				// FIXME
 				float turnSpeed = 10.0f;
 
 				if (scene->mSelected->mRigidBody) {
-					auto rbt = glm::translate(glm::identity<glm::mat4>(), scene->mSelected->mPos);
-					auto rot = glm::slerp(selected->mRot, glm::quatLookAt(-targetFront, selected->mUp), timer.mDelta * turnSpeed);
-					rbt *= glm::mat4_cast(rot);
-					btTransform btt;
-					btt.setFromOpenGLMatrix((const btScalar*)&rbt[0]);
-					scene->mSelected->mRigidBody->setWorldTransform(btt);
+					//auto rot = glm::slerp(selected->mRot, glm::quatLookAt(-targetFront, selected->mUp), timer.mDelta * turnSpeed);
+					auto rot = glm::quatLookAt(-targetFront, selected->mUp);
+					auto cmt = scene->mSelected->mRigidBody->getCenterOfMassTransform();
+					cmt.setRotation(btQuaternion(rot.x, rot.y, rot.z, rot.w));
+					scene->mSelected->mRigidBody->setCenterOfMassTransform(cmt);
 				} else {
 					selected->mFront = targetFront;
 					selected->mRot = glm::slerp(selected->mRot, glm::quatLookAt(-targetFront, selected->mUp), timer.mDelta * turnSpeed);
 				}
-				scene->mSelected->Walk(movementSpeed);
+				//scene->mSelected->Walk(movementSpeed);
+				scene->mSelected->Move(targetFront * movementSpeed);
+				debugLines.push_back({ selected->mPos, selected->mPos + selected->mFront * 3.0f, {1,0,1} });
+				debugLines.push_back({ selected->mPos, selected->mPos + targetFront * 4.0f, {0,1,1} });
 
 				// SELECTED->mFront !?!?!?
 				// TODO: Rotate entity towards camera front perpendicular to ground plane (if rotating with MB2)
-
 				//selected->mFront = targetFront;
 			}
-			if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-				scene->mSelected->Walk(-movementSpeed);
-			if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-				scene->mSelected->Strafe(-movementSpeed);
-			if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-				scene->mSelected->Strafe(movementSpeed);
+
+			if (strafe != 0) {
+				scene->mSelected->Strafe(strafe);
+			}
+
 			if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
 				scene->mSelected->Jump();
 			//if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)

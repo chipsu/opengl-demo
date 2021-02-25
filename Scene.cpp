@@ -32,10 +32,14 @@ struct EntityMotionState : public virtual btMotionState {
 	}
 	virtual void setWorldTransform(const btTransform& worldTrans) {
 		worldTrans.getOpenGLMatrix((btScalar*)&mEntity->mTransform[0]);
-		auto inverted = glm::inverse(mEntity->mTransform);
-		mEntity->mFront = glm::normalize(glm::vec3(inverted[2]));
+		//auto inverted = glm::inverse(mEntity->mTransform);
+		//mEntity->mFront = glm::normalize(glm::vec3(inverted[2]));
 		mEntity->mRot = glm::quat_cast(mEntity->mTransform);
 		mEntity->mPos = glm::vec3(mEntity->mTransform[3]);
+		mEntity->mFront = glm::rotate(mEntity->mRot, glm::vec3(0, 0, 1));
+		//mEntity->mFront = glm::rotate(glm::inverse(mEntity->mRot), glm::vec3(0, 0, -1));
+		//mEntity->mRight = glm::rotate(glm::inverse(mEntity->mRot), glm::vec3(1, 0, 0));
+		//mEntity->mUp = glm::vec3(0.0, 1.0, 0.0);
 	}
 };
 

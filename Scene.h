@@ -140,6 +140,14 @@ struct Entity {
 		}
 	}
 
+	void Move(const glm::vec3& v) {
+		if (mRigidBody) {
+			mRigidBody->setLinearVelocity(cast_vec3(v));
+			return;
+		}
+		mPos += v;
+	}
+
 	void Walk(float f) {
 		if (mRigidBody) {
 			mRigidBody->setLinearVelocity(cast_vec3(mFront * f));
