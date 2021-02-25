@@ -203,12 +203,21 @@ int main(const int argc, const char **argv) {
 			if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
 				auto targetFront = glm::cross(cam.mRight, selected->mUp);
 				targetFront = glm::normalize(targetFront);
-				selected->mFront = targetFront;
 				// FIXME
 				float turnSpeed = 10.0f;
-				selected->mRot = glm::slerp(selected->mRot, glm::quatLookAt(-targetFront, selected->mUp), timer.mDelta * turnSpeed);
-				//selected->mFront = selected->mDebugFront;
-				scene->mSelected->Walk(timer.mDelta * movementSpeed);
+
+				if (scene->mSelected->mRigidBody) {
+					auto rbt = glm::translate(glm::identity<glm::mat4>(), scene->mSelected->mPos);
+					auto rot = glm::slerp(selected->mRot, glm::quatLookAt(-targetFront, selected->mUp), timer.mDelta * turnSpeed);
+					rbt *= glm::mat4_cast(rot);
+					btTransform btt;
+					btt.setFromOpenGLMatrix((const btScalar*)&rbt[0]);
+					scene->mSelected->mRigidBody->setWorldTransform(btt);
+				} else {
+					selected->mFront = targetFront;
+					selected->mRot = glm::slerp(selected->mRot, glm::quatLookAt(-targetFront, selected->mUp), timer.mDelta * turnSpeed);
+				}
+				scene->mSelected->Walk(movementSpeed);
 
 				// SELECTED->mFront !?!?!?
 				// TODO: Rotate entity towards camera front perpendicular to ground plane (if rotating with MB2)
@@ -216,11 +225,11 @@ int main(const int argc, const char **argv) {
 				//selected->mFront = targetFront;
 			}
 			if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-				scene->mSelected->Walk(timer.mDelta * -movementSpeed);
+				scene->mSelected->Walk(-movementSpeed);
 			if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-				scene->mSelected->Strafe(timer.mDelta * -movementSpeed);
+				scene->mSelected->Strafe(-movementSpeed);
 			if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-				scene->mSelected->Strafe(timer.mDelta * movementSpeed);
+				scene->mSelected->Strafe(movementSpeed);
 			if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
 				scene->mSelected->Jump();
 			//if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)

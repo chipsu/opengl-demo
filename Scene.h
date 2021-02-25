@@ -5,6 +5,10 @@
 #include "Shader.h"
 #include "btBulletDynamicsCommon.h"
 
+inline btVector3 cast_vec3(const glm::vec3& v) {
+	return btVector3(v[0], v[1], v[2]);
+}
+
 struct Scene;
 
 struct Entity {
@@ -137,10 +141,18 @@ struct Entity {
 	}
 
 	void Walk(float f) {
+		if (mRigidBody) {
+			mRigidBody->setLinearVelocity(cast_vec3(mFront * f));
+			return;
+		}
 		mPos += mFront * f;
 	}
 
 	void Strafe(float f) {
+		if (mRigidBody) {
+			mRigidBody->setLinearVelocity(cast_vec3(glm::normalize(glm::cross(mFront, mUp)) * f));
+			return;
+		}
 		mPos += glm::normalize(glm::cross(mFront, mUp)) * f;
 	}
 
