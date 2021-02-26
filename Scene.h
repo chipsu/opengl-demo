@@ -120,9 +120,6 @@ struct Entity {
 	}
 	
 	virtual void Update(float absoluteTime, float deltaTime) {
-		if (mAnimationController) {
-			mAnimationController->Update(absoluteTime);
-		}
 		if (mRigidBody) return;
 		UpdatePhysics(deltaTime);
 		auto lp = std::min(deltaTime, 1.0f);
@@ -137,6 +134,12 @@ struct Entity {
 			} else {
 				mTransform = mAttachTo->mTransform * mTransform;
 			}
+		}
+	}
+
+	virtual void UpdateAsync(float absoluteTime, float deltaTime) {
+		if (mAnimationController) {
+			mAnimationController->Update(absoluteTime);
 		}
 	}
 
@@ -224,9 +227,9 @@ struct Scene {
 			mDynamicsWorld->stepSimulation(mStep);
 			mAccum -= mStep;
 		}
-		/*std::for_each(std::execution::par, mEntities.begin(), mEntities.end(), [absoluteTime, deltaTime](auto& entity) {
-			entity->Update(absoluteTime, deltaTime);
-		});*/
+		std::for_each(std::execution::par, mEntities.begin(), mEntities.end(), [absoluteTime, deltaTime](auto& entity) {
+			entity->UpdateAsync(absoluteTime, deltaTime);
+		});
 		for (auto& entity : mEntities) {
 			entity->Update(absoluteTime, deltaTime);
 		}
