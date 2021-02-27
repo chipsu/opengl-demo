@@ -145,7 +145,10 @@ struct Entity {
 
 	void Move(const glm::vec3& v) {
 		if (mRigidBody) {
-			mRigidBody->setLinearVelocity(cast_vec3(v));
+			// FIXME!
+			mRigidBody->activate(true);
+			auto& v2 = mRigidBody->getLinearVelocity();
+			mRigidBody->setLinearVelocity(btVector3(v.x, v2.getY(), v.z));
 			return;
 		}
 		mPos += v;

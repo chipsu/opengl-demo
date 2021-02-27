@@ -69,7 +69,8 @@ void Entity::Load(Scene& scene, const rapidjson::Value& cfg) {
 	if (cfg.HasMember("rigidBody")) {
 		//auto obj = cfg["rigidBody"].GetObject();
 		auto ms = new EntityMotionState(this);
-		auto cs = new btBoxShape(btVector3(1, 1, 1));
+		//auto cs = new btBoxShape(btVector3(1, 1, 1));
+		auto cs = new btCapsuleShape(0.5f, 1.0f);
 		mRigidBody = new btRigidBody(10.0f, ms, cs);
 		scene.mDynamicsWorld->addRigidBody(mRigidBody);
 	}
