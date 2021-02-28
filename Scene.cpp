@@ -67,10 +67,23 @@ void Entity::Load(Scene& scene, const rapidjson::Value& cfg) {
 		}
 	}
 	if (cfg.HasMember("rigidBody")) {
-		//auto obj = cfg["rigidBody"].GetObject();
 		auto ms = new EntityMotionState(this);
-		//auto cs = new btBoxShape(btVector3(1, 1, 1));
-		auto cs = new btCapsuleShape(0.5f, 1.0f);
+		btCollisionShape* cs = nullptr;
+		if (cfg["rigidBody"].IsArray()) {
+			auto obj = cfg["rigidBody"].GetArray();
+			std::string shape = obj[0].GetString();
+			if (shape == "box") {
+				cs = new btBoxShape(btVector3(obj[1].GetFloat(), obj[2].GetFloat(), obj[3].GetFloat()));
+			} else if(shape == "sphere") {
+				cs = new btSphereShape(obj[1].GetFloat());
+			} else if(shape == "capsule") {
+				cs = new btCapsuleShape(obj[1].GetFloat(), obj[2].GetFloat());
+			} else {
+				throw new std::invalid_argument("invalid rigidBody cfg");
+			}
+		} else {
+			cs = new btCapsuleShape(0.5f, 1.0f);
+		}
 		mRigidBody = new btRigidBody(10.0f, ms, cs);
 		scene.mDynamicsWorld->addRigidBody(mRigidBody);
 	}
