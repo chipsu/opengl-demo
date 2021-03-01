@@ -212,29 +212,8 @@ int main(const int argc, const char **argv) {
 				strafe = movementSpeed;
 
 			if (walk != 0) {
-				auto targetFront = glm::cross(cam.mRight, selected->mUp);
-				targetFront = glm::normalize(targetFront);
-				// FIXME
-				float turnSpeed = 10.0f;
-
-				if (scene->mSelected->mRigidBody) {
-					//auto rot = glm::slerp(selected->mRot, glm::quatLookAt(-targetFront, selected->mUp), timer.mDelta * turnSpeed);
-					auto rot = glm::quatLookAt(-targetFront, selected->mUp);
-					auto cmt = scene->mSelected->mRigidBody->getCenterOfMassTransform();
-					cmt.setRotation(btQuaternion(rot.x, rot.y, rot.z, rot.w));
-					scene->mSelected->mRigidBody->setCenterOfMassTransform(cmt);
-				} else {
-					selected->mFront = targetFront;
-					selected->mRot = glm::slerp(selected->mRot, glm::quatLookAt(-targetFront, selected->mUp), timer.mDelta * turnSpeed);
-				}
-				//scene->mSelected->Walk(movementSpeed);
-				scene->mSelected->Move(targetFront * movementSpeed);
+				scene->mSelected->Move(selected->mFront * movementSpeed);
 				debugLines.push_back({ selected->mPos, selected->mPos + selected->mFront * 3.0f, {1,0,1} });
-				debugLines.push_back({ selected->mPos, selected->mPos + targetFront * 4.0f, {0,1,1} });
-
-				// SELECTED->mFront !?!?!?
-				// TODO: Rotate entity towards camera front perpendicular to ground plane (if rotating with MB2)
-				//selected->mFront = targetFront;
 			}
 
 			if (strafe != 0) {
@@ -247,14 +226,15 @@ int main(const int argc, const char **argv) {
 			//	cam.Crounch();
 
 			auto selectedCenter = scene->mSelected->mPos + scene->mSelected->mUp * scene->mSelected->mModel->mAABB.mHalfSize.y;
-
-			bool rot = false;
+			
+			bool rotPlayer = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_2) == GLFW_PRESS;
+			bool rot = rotPlayer || glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS;
 			if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) { rot = true; scene->mCameraRotationX = -0.1f; }
 			if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {rot=true;scene->mCameraRotationX = 0.1f;}
 			if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {rot=true;scene->mCameraRotationY = 0.1f;
 }			if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {rot=true;scene->mCameraRotationY = -0.1f;}
 			
-			if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_2) == GLFW_PRESS ||rot) {
+			if (rot) {
 				auto rotY = glm::angleAxis(scene->mCameraRotationX * timer.mDelta, glm::vec3(0, 1, 0));
 				auto rotX = glm::angleAxis(scene->mCameraRotationY * timer.mDelta, cam.mRight);
 				// TODO: limit X
@@ -274,6 +254,23 @@ int main(const int argc, const char **argv) {
 				cam.mPos = glm::lerp(cam.mPos, targetPos, timer.mDelta * camSpeed);
 				cam.mFront = glm::lerp(cam.mFront, glm::normalize(selectedCenter - cam.mPos), timer.mDelta * camSpeed); // TODO norm
 				cam.mRight = glm::normalize(glm::cross(cam.mUp, cam.mFront));
+			}
+
+			if (rotPlayer) {
+				auto targetFront = glm::normalize(glm::cross(cam.mRight, selected->mUp));
+				auto turnSpeed = 50.0f; // FIXME
+
+				if (scene->mSelected->mRigidBody) {
+					// TODO: selected->mTargetForward
+					auto rot = glm::slerp(selected->mRot, glm::quatLookAt(-targetFront, selected->mUp), timer.mDelta * turnSpeed);
+					//auto rot = glm::quatLookAt(-targetFront, selected->mUp);
+					auto cmt = scene->mSelected->mRigidBody->getCenterOfMassTransform();
+					cmt.setRotation(btQuaternion(rot.x, rot.y, rot.z, rot.w));
+					scene->mSelected->mRigidBody->setCenterOfMassTransform(cmt);
+				} else {
+					selected->mFront = targetFront;
+					selected->mRot = glm::slerp(selected->mRot, glm::quatLookAt(-targetFront, selected->mUp), timer.mDelta * turnSpeed);
+				}
 			}
 		}
 

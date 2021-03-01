@@ -109,7 +109,7 @@ struct Input {
 
 	void OnMousePos(GLFWwindow* window, double xpos, double ypos) {
 		if (false) printf("cursor_position_callback: %f %f\n", xpos, ypos);
-		if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_2) == GLFW_PRESS || glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_3) == GLFW_PRESS) {
+		if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_2) == GLFW_PRESS || glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS) {
 			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 			mScene->mCameraRotationX = (mMouseX - xpos) * mRotateSpeedX;
 			mScene->mCameraRotationY = (mMouseY - ypos) * mRotateSpeedY;
