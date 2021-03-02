@@ -31,6 +31,8 @@ struct Entity {
 	Entity_ mAttachTo;
 	uint32_t mAttachToNode = -1;
 	btRigidBody* mRigidBody = nullptr;
+	glm::vec3 mTargetFront;
+	bool mTargetFrontEnable = false;
 
 	Entity() {}
 	Entity(Model_ model) : mModel(model) {}
@@ -120,6 +122,24 @@ struct Entity {
 	}
 	
 	virtual void Update(float absoluteTime, float deltaTime) {
+		if (mTargetFrontEnable) {
+			auto turnSpeed = 50.0f; // FIXME
+
+			if (mRigidBody) {
+				auto rot = glm::slerp(mRot, glm::quatLookAt(-mTargetFront, mUp), deltaTime * turnSpeed);
+				//auto rot = glm::quatLookAt(-targetFront, selected->mUp);
+				auto cmt = mRigidBody->getCenterOfMassTransform();
+				cmt.setRotation(btQuaternion(rot.x, rot.y, rot.z, rot.w));
+				mRigidBody->setCenterOfMassTransform(cmt);
+			} else {
+				mFront = mTargetFront;
+				mRot = glm::quatLookAt(-mTargetFront, mUp);
+			}
+
+			if (glm::all(glm::epsilonEqual(mFront, mTargetFront, 0.001f))) {
+				mTargetFrontEnable = false;
+			}
+		}
 		if (mRigidBody) return;
 		UpdatePhysics(deltaTime);
 		auto lp = std::min(deltaTime, 1.0f);

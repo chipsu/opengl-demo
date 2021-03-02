@@ -257,20 +257,8 @@ int main(const int argc, const char **argv) {
 			}
 
 			if (rotPlayer) {
-				auto targetFront = glm::normalize(glm::cross(cam.mRight, selected->mUp));
-				auto turnSpeed = 50.0f; // FIXME
-
-				if (scene->mSelected->mRigidBody) {
-					// TODO: selected->mTargetForward
-					auto rot = glm::slerp(selected->mRot, glm::quatLookAt(-targetFront, selected->mUp), timer.mDelta * turnSpeed);
-					//auto rot = glm::quatLookAt(-targetFront, selected->mUp);
-					auto cmt = scene->mSelected->mRigidBody->getCenterOfMassTransform();
-					cmt.setRotation(btQuaternion(rot.x, rot.y, rot.z, rot.w));
-					scene->mSelected->mRigidBody->setCenterOfMassTransform(cmt);
-				} else {
-					selected->mFront = targetFront;
-					selected->mRot = glm::slerp(selected->mRot, glm::quatLookAt(-targetFront, selected->mUp), timer.mDelta * turnSpeed);
-				}
+				selected->mTargetFront = glm::normalize(glm::cross(cam.mRight, selected->mUp));
+				selected->mTargetFrontEnable = true;
 			}
 		}
 
