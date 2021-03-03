@@ -250,7 +250,9 @@ int main(const int argc, const char **argv) {
 				cam.mFront = glm::normalize(selectedCenter - cam.mPos);
 				cam.mRight = glm::normalize(glm::cross(cam.mUp, cam.mFront));
 			} else {
+				// TODO: Fixed pos & rot from player
 				auto targetPos = selectedCenter + cam.mFront * -scene->mCameraDistance;
+				cam.mPos.y = targetPos.y;
 				cam.mPos = glm::lerp(cam.mPos, targetPos, timer.mDelta * camSpeed);
 				cam.mFront = glm::lerp(cam.mFront, glm::normalize(selectedCenter - cam.mPos), timer.mDelta * camSpeed); // TODO norm
 				cam.mRight = glm::normalize(glm::cross(cam.mUp, cam.mFront));
