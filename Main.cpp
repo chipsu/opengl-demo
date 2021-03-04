@@ -310,8 +310,8 @@ int main(const int argc, const char **argv) {
 					);
 				}*/
 			}
-			if (ImGui::TreeNode("ModelNodes")) {
-				auto renderTree = [](ModelNode_ node, auto renderTree) -> void {
+			if (selectedModel->HasAnimations() && ImGui::TreeNode("AnimationNodes")) {
+				auto renderTree = [](AnimationNode_ node, auto renderTree) -> void {
 					if (ImGui::TreeNode(node->mName.c_str())) {
 						ImGui::Text(glm::to_string(node->mTransform).c_str());
 						for (auto& c : node->mChildren) {
@@ -320,7 +320,7 @@ int main(const int argc, const char **argv) {
 						ImGui::TreePop();
 					}
 				};
-				renderTree(selectedModel->mRootNode, renderTree);
+				renderTree(selectedModel->mAnimationSet->mAnimations[0]->mRootNode, renderTree);
 				ImGui::TreePop();
 			}
 		}

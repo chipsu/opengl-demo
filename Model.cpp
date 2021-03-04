@@ -54,8 +54,7 @@ void LoadBoneWeights(Model* model, Mesh_ mesh, const aiMesh* nodeMesh) {
     }
 }
 
-ModelNode_ LoadNode(Model* model, const aiScene* scene, const aiNode* node, ModelNode_ parent, const glm::mat4& parentTransform) {
-    ModelNode_ modelNode = std::make_shared<ModelNode>(node->mName.data, parent, make_mat4(node->mTransformation));
+void LoadNode(Model* model, const aiScene* scene, const aiNode* node, const glm::mat4& parentTransform) {
     glm::mat4 combinedTransform = parentTransform * make_mat4(node->mTransformation);
 
     for (unsigned int meshIndex = 0; meshIndex < node->mNumMeshes; ++meshIndex) {
@@ -104,16 +103,12 @@ ModelNode_ LoadNode(Model* model, const aiScene* scene, const aiNode* node, Mode
             LoadBoneWeights(model, mesh, nodeMesh);
         }
 
-        modelNode->mMeshes.push_back(mesh);
         model->mMeshes.push_back(std::make_shared<ModelMesh>(mesh, combinedTransform));
     }
 
     for (unsigned int childIndex = 0; childIndex < node->mNumChildren; ++childIndex) {
-        auto childNode = LoadNode(model, scene, node->mChildren[childIndex], modelNode, combinedTransform);
-        modelNode->mChildren.push_back(childNode);
+        LoadNode(model, scene, node->mChildren[childIndex], combinedTransform);
     }
-
-    return modelNode;
 }
 
 AnimationNode_ LoadHierarchy(Model* model, const aiNode* node, AnimationNode_ parent = nullptr) {
@@ -236,10 +231,9 @@ const aiScene* LoadScene(const std::string& fileName, const ModelOptions& option
 void Model::Load(const std::string& fileName, const ModelOptions& options) {
     const auto scene = LoadScene(fileName, options);
     mName = fileName;
-    mRootNode.reset();
     mAnimationSet.reset();
     LoadAnimations(this, scene);
-    mRootNode = LoadNode(this, scene, scene->mRootNode, nullptr, glm::identity<glm::mat4>());
+    LoadNode(this, scene, scene->mRootNode, glm::identity<glm::mat4>());
     aiReleaseImport(scene);
     UpdateAABB();
 }
