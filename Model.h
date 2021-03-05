@@ -32,7 +32,7 @@ struct Model {
 	void UpdateAABB() {
 		// FIXME
 		mAABB.mCenter = { 0,0,0 };
-		mAABB.mHalfSize = { 1,1,1 };
+		mAABB.mHalfSize = { .5,1,.5 };
 	}
 	bool HasAnimations() const {
 		// FIXME

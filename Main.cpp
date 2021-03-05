@@ -67,7 +67,7 @@ struct Camera {
 	}
 
 	void SetAspect(int width, int height) {
-		mFov = width / (float)height;
+		mAspect = width / (float)height;
 	}
 
 	void UpdateView() {
@@ -93,6 +93,44 @@ struct DebugPoint {
 	DebugPoint(const glm::vec3& p, float s = 1.0f) {
 		mPos = p;
 		mScale = s;
+	}
+};
+
+struct DebugRenderer {
+	std::vector<DebugLine> mLines;
+
+	void AddLine(const DebugLine& line) { mLines.push_back(line); }
+	void AddCube(const glm::vec3& pos, const AABB& aabb, const glm::vec3& color) {
+		auto up = glm::vec3(0, 1, 0);
+		auto s = aabb.mHalfSize * 2;
+		auto a = pos + aabb.mCenter - aabb.mHalfSize;
+		auto b = a + s * glm::vec3(1, 0, 0);
+		auto c = b + s * glm::vec3(0, 0, 1);
+		auto d = c + s * glm::vec3(-1, 0, 0);
+
+		//AddLine({ { a.x, a.y, a.z }, a + aabb.mHalfSize * 2, {0,0,1} });
+
+		AddLine({ a, b, color });
+		AddLine({ b, c, color });
+		AddLine({ c, d, color });
+		AddLine({ d, a, color });
+
+		AddLine({ a, a + s * up, color });
+		AddLine({ b, b + s * up, color });
+		AddLine({ c, c + s * up, color });
+		AddLine({ d, d + s * up, color });
+
+		AddLine({ a + s * up, b + s * up, color });
+		AddLine({ b + s * up, c + s * up, color });
+		AddLine({ c + s * up, d + s * up, color });
+		AddLine({ d + s * up, a + s * up, color });
+	}
+
+	void AddGrid(float scale, float halfSize, const glm::vec3& color) {
+		for (int dx = -halfSize; dx <= halfSize; ++dx) {
+			AddLine({ {dx * scale, 0, -halfSize * scale}, {dx * scale, 0, halfSize * scale}, color });
+			AddLine({ {-halfSize * scale, 0, dx * scale}, {halfSize * scale, 0, dx * scale}, color });
+		}
 	}
 };
 
@@ -152,16 +190,12 @@ int main(const int argc, const char **argv) {
 	glm::vec3 lightPos = { 100.0f, 100.0f, 100.0f };
 	glm::vec3 lightColor = { 1.0f, 1.0f, 1.0f };
 
-	std::vector<DebugLine> debugLines;
+	DebugRenderer debugRenderer;
+	DebugRenderer persistentDebugRenderer;
 	std::vector<DebugPoint> debugPoints;
-	std::vector<DebugLine> persistentDebugLines;
 
-	float gridScale = 1.0f;
-	int gridHalfSize = 10;
-	for (int dx = -gridHalfSize; dx <= gridHalfSize; ++dx) {
-		persistentDebugLines.push_back({ {dx * gridScale, 0, -gridHalfSize * gridScale}, {dx * gridScale, 0, gridHalfSize * gridScale}, {.5f, .5f, .5f} });
-		persistentDebugLines.push_back({ {-gridHalfSize * gridScale, 0, dx * gridScale}, {gridHalfSize * gridScale, 0, dx * gridScale}, {.5f, .5f, .5f} });
-	}
+	persistentDebugRenderer.AddGrid(1.0f, 10.0f, { .5f, .5f, .5f });
+
 
 	Camera cam;
 	cam.mRight = glm::normalize(glm::cross(cam.mUp, cam.mFront));
@@ -213,7 +247,7 @@ int main(const int argc, const char **argv) {
 
 			if (walk != 0) {
 				scene->mSelected->Move(selected->mFront * movementSpeed);
-				debugLines.push_back({ selected->mPos, selected->mPos + selected->mFront * 3.0f, {1,0,1} });
+				debugRenderer.AddLine({ selected->mPos, selected->mPos + selected->mFront * 3.0f, {1,0,1} });
 			}
 
 			if (strafe != 0) {
@@ -246,10 +280,11 @@ int main(const int argc, const char **argv) {
 				scene->mCameraRotationY = 0;
 
 				cam.mPos = targetPos2;
-				debugLines.push_back({ selectedCenter , cam.mPos, {1,1,1} });
+				debugRenderer.AddLine({ selectedCenter , cam.mPos, {1,1,1} });
 				cam.mFront = glm::normalize(selectedCenter - cam.mPos);
 				cam.mRight = glm::normalize(glm::cross(cam.mUp, cam.mFront));
-			} else {
+			}
+			else {
 				// TODO: Fixed pos & rot from player
 				auto targetPos = selectedCenter + cam.mFront * -scene->mCameraDistance;
 				cam.mPos.y = targetPos.y;
@@ -265,10 +300,13 @@ int main(const int argc, const char **argv) {
 		}
 
 		if (enableDebug && selected) {
-			debugLines.push_back({ selected->mPos, selected->mPos + cam.mFront, { 1, 1, 1 } });
-			debugLines.push_back({ selected->mPos, selected->mPos + selected->mFront, { 1, 0, 0 } });
-			debugLines.push_back({ selected->mPos, selected->mPos + selected->mUp, { 0, 1, 0 } });
+			debugRenderer.AddLine({ selected->mPos, selected->mPos + cam.mFront, { 1, 1, 1 } });
+			debugRenderer.AddLine({ selected->mPos, selected->mPos + selected->mFront, { 1, 0, 0 } });
+			debugRenderer.AddLine({ selected->mPos, selected->mPos + selected->mUp, { 0, 1, 0 } });
 			debugPoints.push_back(DebugPoint(selected->mPos));
+			if (selected->mModel) {
+				debugRenderer.AddCube(selected->mPos, selected->mModel->mAABB, { 1, 1, 0 });
+			}
 		}
 
 		ui->NewFrame();
@@ -480,12 +518,12 @@ int main(const int argc, const char **argv) {
 			glUniformMatrix4fv(glGetUniformLocation(debugProgram->mID, "uModel"), 1, GL_FALSE, (GLfloat*)&debugTransform[0]);
 
 			if (drawPersistentDebug) {
-				drawDebugLines(persistentDebugLines);
+				drawDebugLines(persistentDebugRenderer.mLines);
 			}
 
 			if (drawDebug) {
 				glDisable(GL_DEPTH_TEST);
-				drawDebugLines(debugLines);
+				drawDebugLines(debugRenderer.mLines);
 
 				glUseProgram(debugPointProgram->mID);
 				glUniformMatrix4fv(glGetUniformLocation(debugPointProgram->mID, "uProj"), 1, GL_FALSE, (GLfloat*)&cam.mProjection[0]);
@@ -515,7 +553,7 @@ int main(const int argc, const char **argv) {
 				glDrawElements(GL_TRIANGLES, debugMesh->mIndices.size(), GL_UNSIGNED_INT, 0);
 			}
 		}
-		debugLines.clear();
+		debugRenderer.mLines.clear();
 		debugPoints.clear();
 
 		ui->Render();
