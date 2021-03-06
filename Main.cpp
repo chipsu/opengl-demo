@@ -98,6 +98,12 @@ struct DebugPoint {
 
 struct DebugRenderer {
 	std::vector<DebugLine> mLines;
+	std::vector<DebugPoint> mPoints;
+
+	void Clear() {
+		mLines.clear();
+		mPoints.clear();
+	}
 
 	void AddLine(const DebugLine& line) { mLines.push_back(line); }
 	void AddCube(const glm::vec3& pos, const AABB& aabb, const glm::vec3& color) {
@@ -131,6 +137,14 @@ struct DebugRenderer {
 			AddLine({ {dx * scale, 0, -halfSize * scale}, {dx * scale, 0, halfSize * scale}, color });
 			AddLine({ {-halfSize * scale, 0, dx * scale}, {halfSize * scale, 0, dx * scale}, color });
 		}
+	}
+
+	void AddPoint(const DebugPoint& point) {
+		mPoints.push_back(point);
+	}
+
+	void AddPoint(const glm::vec3& point) {
+		mPoints.push_back({ point });
 	}
 };
 
@@ -192,7 +206,6 @@ int main(const int argc, const char **argv) {
 
 	DebugRenderer debugRenderer;
 	DebugRenderer persistentDebugRenderer;
-	std::vector<DebugPoint> debugPoints;
 
 	persistentDebugRenderer.AddGrid(1.0f, 10.0f, { .5f, .5f, .5f });
 
@@ -303,7 +316,7 @@ int main(const int argc, const char **argv) {
 			debugRenderer.AddLine({ selected->mPos, selected->mPos + cam.mFront, { 1, 1, 1 } });
 			debugRenderer.AddLine({ selected->mPos, selected->mPos + selected->mFront, { 1, 0, 0 } });
 			debugRenderer.AddLine({ selected->mPos, selected->mPos + selected->mUp, { 0, 1, 0 } });
-			debugPoints.push_back(DebugPoint(selected->mPos));
+			debugRenderer.AddPoint(selected->mPos);
 			if (selected->mModel) {
 				debugRenderer.AddCube(selected->mPos, selected->mModel->mAABB, { 1, 1, 0 });
 			}
@@ -510,28 +523,8 @@ int main(const int argc, const char **argv) {
 				}
 			};
 
-			auto debugTransform = glm::identity<glm::mat4>();
-
-			glUseProgram(debugProgram->mID);
-			glUniformMatrix4fv(glGetUniformLocation(debugProgram->mID, "uProj"), 1, GL_FALSE, (GLfloat*)&cam.mProjection[0]);
-			glUniformMatrix4fv(glGetUniformLocation(debugProgram->mID, "uView"), 1, GL_FALSE, (GLfloat*)&cam.mView[0]);
-			glUniformMatrix4fv(glGetUniformLocation(debugProgram->mID, "uModel"), 1, GL_FALSE, (GLfloat*)&debugTransform[0]);
-
-			if (drawPersistentDebug) {
-				drawDebugLines(persistentDebugRenderer.mLines);
-			}
-
-			if (drawDebug) {
-				glDisable(GL_DEPTH_TEST);
-				drawDebugLines(debugRenderer.mLines);
-
-				glUseProgram(debugPointProgram->mID);
-				glUniformMatrix4fv(glGetUniformLocation(debugPointProgram->mID, "uProj"), 1, GL_FALSE, (GLfloat*)&cam.mProjection[0]);
-				glUniformMatrix4fv(glGetUniformLocation(debugPointProgram->mID, "uView"), 1, GL_FALSE, (GLfloat*)&cam.mView[0]);
-				glUniformMatrix4fv(glGetUniformLocation(debugPointProgram->mID, "uModel"), 1, GL_FALSE, (GLfloat*)&debugTransform[0]);
-
-				debugPoints.push_back(DebugPoint(0, 0, 0));
-
+			auto drawDebugPoints = [](auto& debugPoints) {
+				if (debugPoints.size() < 1) return;
 				auto debugMesh = std::make_shared<Mesh>();
 				for (auto& debugPoint : debugPoints) {
 					float ps = 0.25f;
@@ -551,10 +544,41 @@ int main(const int argc, const char **argv) {
 				}
 				debugMesh->Bind();
 				glDrawElements(GL_TRIANGLES, debugMesh->mIndices.size(), GL_UNSIGNED_INT, 0);
+			};
+
+			auto debugTransform = glm::identity<glm::mat4>();
+
+			glUseProgram(debugProgram->mID);
+			glUniformMatrix4fv(glGetUniformLocation(debugProgram->mID, "uProj"), 1, GL_FALSE, (GLfloat*)&cam.mProjection[0]);
+			glUniformMatrix4fv(glGetUniformLocation(debugProgram->mID, "uView"), 1, GL_FALSE, (GLfloat*)&cam.mView[0]);
+			glUniformMatrix4fv(glGetUniformLocation(debugProgram->mID, "uModel"), 1, GL_FALSE, (GLfloat*)&debugTransform[0]);
+
+			if (drawDebug) {
+				glDisable(GL_DEPTH_TEST);
+				drawDebugLines(debugRenderer.mLines);
+				glEnable(GL_DEPTH_TEST);
+			}
+
+			if (drawPersistentDebug) {
+				drawDebugLines(persistentDebugRenderer.mLines);
+			}
+
+			glUseProgram(debugPointProgram->mID);
+			glUniformMatrix4fv(glGetUniformLocation(debugPointProgram->mID, "uProj"), 1, GL_FALSE, (GLfloat*)&cam.mProjection[0]);
+			glUniformMatrix4fv(glGetUniformLocation(debugPointProgram->mID, "uView"), 1, GL_FALSE, (GLfloat*)&cam.mView[0]);
+			glUniformMatrix4fv(glGetUniformLocation(debugPointProgram->mID, "uModel"), 1, GL_FALSE, (GLfloat*)&debugTransform[0]);
+
+			if (drawDebug) {
+				glDisable(GL_DEPTH_TEST);
+				drawDebugPoints(debugRenderer.mPoints);
+				glEnable(GL_DEPTH_TEST);
+			}
+
+			if (drawPersistentDebug) {
+				drawDebugPoints(persistentDebugRenderer.mPoints);
 			}
 		}
-		debugRenderer.mLines.clear();
-		debugPoints.clear();
+		debugRenderer.Clear();
 
 		ui->Render();
 	}
