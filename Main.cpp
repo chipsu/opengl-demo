@@ -99,6 +99,13 @@ struct DebugPoint {
 struct DebugRenderer {
 	std::vector<DebugLine> mLines;
 	std::vector<DebugPoint> mPoints;
+	ShaderProgram_ mLineProgram;
+	ShaderProgram_ mPointProgram;
+
+	DebugRenderer() {
+		mLineProgram = ShaderProgram::Load("debug");
+		mPointProgram = ShaderProgram::Load("particles");
+	}
 
 	void Clear() {
 		mLines.clear();
@@ -146,6 +153,67 @@ struct DebugRenderer {
 	void AddPoint(const glm::vec3& point) {
 		mPoints.push_back({ point });
 	}
+
+	void Render(const Camera& cam) {
+		auto drawDebugLines = [](auto& debugLines) {
+			for (auto& debugLine : debugLines) {
+				auto debugMesh = std::make_shared<Mesh>();
+				debugMesh->mIndices.push_back(0);
+				debugMesh->mIndices.push_back(1);
+				debugMesh->mVertices.push_back({
+					debugLine.mStart,
+					{},
+					debugLine.mColor
+					});
+				debugMesh->mVertices.push_back({
+					debugLine.mEnd,
+					{},
+					debugLine.mColor
+					});
+				debugMesh->Bind();
+				glDrawElements(GL_LINES, debugMesh->mIndices.size(), GL_UNSIGNED_INT, 0);
+			}
+		};
+
+		auto drawDebugPoints = [](auto& debugPoints) {
+			if (debugPoints.size() < 1) return;
+			auto debugMesh = std::make_shared<Mesh>();
+			for (auto& debugPoint : debugPoints) {
+				float ps = 0.25f;
+				float quad[] = {
+					0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f,
+					0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f,
+				};
+				for (int v = 0; v < 12; v += 2) {
+					Vertex vertex;
+					vertex.mPos = debugPoint.mPos;
+					vertex.mNormal.x = (quad[v] - 0.5f) * ps;
+					vertex.mNormal.y = (quad[v + 1] - 0.5f) * ps;
+					vertex.mNormal.z = debugPoint.mScale;
+					debugMesh->mVertices.push_back(vertex);
+					debugMesh->mIndices.push_back(debugMesh->mIndices.size());
+				}
+			}
+			debugMesh->Bind();
+			glDrawElements(GL_TRIANGLES, debugMesh->mIndices.size(), GL_UNSIGNED_INT, 0);
+		};
+
+		auto debugTransform = glm::identity<glm::mat4>();
+
+		glUseProgram(mLineProgram->mID);
+		glUniformMatrix4fv(glGetUniformLocation(mLineProgram->mID, "uProj"), 1, GL_FALSE, (GLfloat*)&cam.mProjection[0]);
+		glUniformMatrix4fv(glGetUniformLocation(mLineProgram->mID, "uView"), 1, GL_FALSE, (GLfloat*)&cam.mView[0]);
+		glUniformMatrix4fv(glGetUniformLocation(mLineProgram->mID, "uModel"), 1, GL_FALSE, (GLfloat*)&debugTransform[0]);
+
+		drawDebugLines(mLines);
+
+		glUseProgram(mPointProgram->mID);
+		glUniformMatrix4fv(glGetUniformLocation(mPointProgram->mID, "uProj"), 1, GL_FALSE, (GLfloat*)&cam.mProjection[0]);
+		glUniformMatrix4fv(glGetUniformLocation(mPointProgram->mID, "uView"), 1, GL_FALSE, (GLfloat*)&cam.mView[0]);
+		glUniformMatrix4fv(glGetUniformLocation(mPointProgram->mID, "uModel"), 1, GL_FALSE, (GLfloat*)&debugTransform[0]);
+
+		drawDebugPoints(mPoints);
+	}
 };
 
 int main(const int argc, const char **argv) {
@@ -188,8 +256,6 @@ int main(const int argc, const char **argv) {
 
 	auto ui = std::make_shared<UI>(window);
 
-	auto debugProgram = ShaderProgram::Load("debug");
-	auto debugPointProgram = ShaderProgram::Load("particles");
 	
 	bool autoBlend = false;
 	bool animDetails = false;
@@ -208,7 +274,6 @@ int main(const int argc, const char **argv) {
 	DebugRenderer persistentDebugRenderer;
 
 	persistentDebugRenderer.AddGrid(1.0f, 10.0f, { .5f, .5f, .5f });
-
 
 	Camera cam;
 	cam.mRight = glm::normalize(glm::cross(cam.mUp, cam.mFront));
@@ -503,79 +568,13 @@ int main(const int argc, const char **argv) {
 		}
 
 		if (enableDebug) {
-			auto drawDebugLines = [](auto& debugLines) {
-				for (auto& debugLine : debugLines) {
-					auto debugMesh = std::make_shared<Mesh>();
-					debugMesh->mIndices.push_back(0);
-					debugMesh->mIndices.push_back(1);
-					debugMesh->mVertices.push_back({
-						debugLine.mStart,
-						{},
-						debugLine.mColor
-						});
-					debugMesh->mVertices.push_back({
-						debugLine.mEnd,
-						{},
-						debugLine.mColor
-						});
-					debugMesh->Bind();
-					glDrawElements(GL_LINES, debugMesh->mIndices.size(), GL_UNSIGNED_INT, 0);
-				}
-			};
-
-			auto drawDebugPoints = [](auto& debugPoints) {
-				if (debugPoints.size() < 1) return;
-				auto debugMesh = std::make_shared<Mesh>();
-				for (auto& debugPoint : debugPoints) {
-					float ps = 0.25f;
-					float quad[] = {
-						0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f,
-						0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f,
-					};
-					for (int v = 0; v < 12; v += 2) {
-						Vertex vertex;
-						vertex.mPos = debugPoint.mPos;
-						vertex.mNormal.x = (quad[v] - 0.5f) * ps;
-						vertex.mNormal.y = (quad[v + 1] - 0.5f) * ps;
-						vertex.mNormal.z = debugPoint.mScale;
-						debugMesh->mVertices.push_back(vertex);
-						debugMesh->mIndices.push_back(debugMesh->mIndices.size());
-					}
-				}
-				debugMesh->Bind();
-				glDrawElements(GL_TRIANGLES, debugMesh->mIndices.size(), GL_UNSIGNED_INT, 0);
-			};
-
-			auto debugTransform = glm::identity<glm::mat4>();
-
-			glUseProgram(debugProgram->mID);
-			glUniformMatrix4fv(glGetUniformLocation(debugProgram->mID, "uProj"), 1, GL_FALSE, (GLfloat*)&cam.mProjection[0]);
-			glUniformMatrix4fv(glGetUniformLocation(debugProgram->mID, "uView"), 1, GL_FALSE, (GLfloat*)&cam.mView[0]);
-			glUniformMatrix4fv(glGetUniformLocation(debugProgram->mID, "uModel"), 1, GL_FALSE, (GLfloat*)&debugTransform[0]);
-
 			if (drawDebug) {
 				glDisable(GL_DEPTH_TEST);
-				drawDebugLines(debugRenderer.mLines);
+				debugRenderer.Render(cam);
 				glEnable(GL_DEPTH_TEST);
 			}
-
 			if (drawPersistentDebug) {
-				drawDebugLines(persistentDebugRenderer.mLines);
-			}
-
-			glUseProgram(debugPointProgram->mID);
-			glUniformMatrix4fv(glGetUniformLocation(debugPointProgram->mID, "uProj"), 1, GL_FALSE, (GLfloat*)&cam.mProjection[0]);
-			glUniformMatrix4fv(glGetUniformLocation(debugPointProgram->mID, "uView"), 1, GL_FALSE, (GLfloat*)&cam.mView[0]);
-			glUniformMatrix4fv(glGetUniformLocation(debugPointProgram->mID, "uModel"), 1, GL_FALSE, (GLfloat*)&debugTransform[0]);
-
-			if (drawDebug) {
-				glDisable(GL_DEPTH_TEST);
-				drawDebugPoints(debugRenderer.mPoints);
-				glEnable(GL_DEPTH_TEST);
-			}
-
-			if (drawPersistentDebug) {
-				drawDebugPoints(persistentDebugRenderer.mPoints);
+				persistentDebugRenderer.Render(cam);
 			}
 		}
 		debugRenderer.Clear();
