@@ -47,8 +47,6 @@ struct DebugRenderer {
 		auto c = b + s * glm::vec3(0, 0, 1);
 		auto d = c + s * glm::vec3(-1, 0, 0);
 
-		//AddLine({ { a.x, a.y, a.z }, a + aabb.mHalfSize * 2, {0,0,1} });
-
 		AddLine({ a, b, color });
 		AddLine({ b, c, color });
 		AddLine({ c, d, color });
