@@ -152,8 +152,8 @@ int main(const int argc, const char **argv) {
 				strafe = movementSpeed;
 
 			if (walk != 0) {
-				scene->mSelected->Move(selected->mFront * movementSpeed);
-				debugRenderer.AddLine({ selected->mPos, selected->mPos + selected->mFront * 3.0f, {1,0,1} });
+				scene->mSelected->Move(selected->mFront * walk);
+				debugRenderer.AddLine({ selected->mPos, selected->mPos + selected->mFront * walk, {1,0,1} });
 			}
 
 			if (strafe != 0) {
@@ -388,7 +388,15 @@ int main(const int argc, const char **argv) {
 			}
 			for (auto& modelMesh : model->mMeshes) {
 				if (modelMesh->mMesh->mHidden) continue;
-				glm::mat4 meshTransform = entity->mTransform * modelMesh->mTransform;
+				//glm::mat4 meshTransform = entity->mTransform * modelMesh->mTransform;
+
+				// FIXME!!!
+				glm::mat4 meshTransform = entity->mTransform;
+				if (entity->mRigidBody) {
+					meshTransform = glm::translate(meshTransform, { 0, -1, 0 });
+				}
+				meshTransform *= modelMesh->mTransform;
+
 				glUniformMatrix4fv(shaderProgram->uModel, 1, GL_FALSE, (GLfloat*)&meshTransform[0]);
 				modelMesh->mMesh->Bind();
 				glDrawElements(modelMesh->mMesh->mMode, modelMesh->mMesh->mIndices.size(), GL_UNSIGNED_INT, 0);
