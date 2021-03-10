@@ -14,21 +14,19 @@ struct ModelMesh {
 };
 typedef ModelMesh::ModelMesh_ ModelMesh_;
 
-struct ModelOptions {
-	float mScale = 1.0f;
-};
-
 struct Model {
 	std::string mName;
 	std::vector<ModelMesh_> mMeshes;
 	AnimationSet_ mAnimationSet;
 	AABB mAABB;
 	void Load(const std::string& fileName) { Load(fileName, {}); }
-	void Load(const std::string& fileName, const ModelOptions& options);
-	void LoadAnimation(const std::string& fileName, bool append = false) {
+	void Load(const std::string& fileName, const rapidjson::Value& options);
+	/*void LoadAnimation(const std::string& fileName, bool append = false) {
 		LoadAnimation(fileName, {}, append);
 	}
-	void LoadAnimation(const std::string& fileName, const ModelOptions& options, bool append = false);
+	void LoadAnimation(const std::string& fileName, const ModelOptions& options, bool append = false);*/
+	void Import(const std::string& fileName);
+	void Export(const std::string& fileName);
 	void UpdateAABB() {
 		// FIXME
 		mAABB.mCenter = { 0,0,0 };

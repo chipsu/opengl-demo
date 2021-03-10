@@ -208,7 +208,7 @@ void FixSceneUpAxis(const aiScene* scene) {
     scene->mRootNode->mTransformation = mat;
 }
 
-const aiScene* LoadScene(const std::string& fileName, const ModelOptions& options) {
+const aiScene* LoadScene(const std::string& fileName, const rapidjson::Value& options) {
     // FIXME: config
     auto props = aiCreatePropertyStore();
     //aiSetImportPropertyFloat(props, AI_CONFIG_GLOBAL_SCALE_FACTOR_KEY, options.mScale);
@@ -224,11 +224,12 @@ const aiScene* LoadScene(const std::string& fileName, const ModelOptions& option
             std::cout << scene->mMetaData->mKeys[i].data << "=" << GetMetaDataString(scene->mMetaData->mValues[i]) << std::endl;
         }
     }
-    scene->mRootNode->mTransformation.Scaling(aiVector3D(options.mScale, options.mScale, options.mScale), scene->mRootNode->mTransformation); // FIXME
+    auto scale = options.HasMember("scale") ? options["scale"].GetFloat() : 1.0f;
+    scene->mRootNode->mTransformation.Scaling(aiVector3D(scale, scale, scale), scene->mRootNode->mTransformation); // FIXME
     return scene;
 }
 
-void Model::Load(const std::string& fileName, const ModelOptions& options) {
+void Model::Load(const std::string& fileName, const rapidjson::Value& options) {
     const auto scene = LoadScene(fileName, options);
     mName = fileName;
     mAnimationSet.reset();
@@ -238,10 +239,18 @@ void Model::Load(const std::string& fileName, const ModelOptions& options) {
     UpdateAABB();
 }
 
-void Model::LoadAnimation(const std::string& fileName, const ModelOptions& options, bool append) {
-    const auto scene = LoadScene(fileName, options);
-    if (!append) {
-        mAnimationSet.reset();
-    }
-    LoadAnimations(this, scene);
+//void Model::LoadAnimation(const std::string& fileName, const ModelOptions& options, bool append) {
+//    const auto scene = LoadScene(fileName, options);
+//    if (!append) {
+//        mAnimationSet.reset();
+//    }
+//    LoadAnimations(this, scene);
+//}
+
+void Model::Import(const std::string& fileName) {
+    std::cerr << "Model::Import" << std::endl;
+}
+
+void Model::Export(const std::string& fileName) {
+    std::cerr << "Model::Export" << std::endl;
 }

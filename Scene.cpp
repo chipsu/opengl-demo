@@ -1,4 +1,5 @@
 #include "Scene.h"
+#include "Asset.h"
 
 using namespace rapidjson;
 
@@ -89,23 +90,21 @@ void Entity::Load(Scene& scene, const rapidjson::Value& cfg) {
 	}
 }
 
+AssetMgr<Model>* gModelMgr = nullptr; // FIXXXXXXX
+
 void ModelEntity::Load(Scene& scene, const rapidjson::Value& cfg) {
 	Entity::Load(scene, cfg);
 	mShaderProgram = ShaderProgram::Load("default");
-	mModel = std::make_shared<Model>();
-	ModelOptions modelOptions;
-	if (cfg.HasMember("modelOptions")) {
-		const auto& opts = cfg["modelOptions"].GetObject();
-		if (opts.HasMember("scale")) {
-			modelOptions.mScale = opts["scale"].GetFloat();
-		}
-	}
-	mModel->Load(cfg["model"].GetString(), modelOptions);
+	if (nullptr == gModelMgr) gModelMgr = new AssetMgr<Model>();
+	std::string name = cfg["model"].GetString();
+	mModel = gModelMgr->Load(name, cfg, "modelOptions");
+	/*
+*	// TODO: mModel->AddAnimations...
 	if (cfg.HasMember("animations")) {
 		for (const auto& anim : cfg["animations"].GetArray()) {
 			mModel->LoadAnimation(anim.GetString(), modelOptions, true);
 		}
-	}
+	}*/
 }
 
 void ParticleEntity::Init(Scene& scene) {

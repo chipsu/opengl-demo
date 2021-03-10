@@ -24,7 +24,7 @@ Scene_ CreateScene(const int argc, const char** argv) {
 		
 		if (arg == "-s") {
 			scene->Load(argv[++i]);
-		} else if (arg == "-m") {
+		} /*else if (arg == "-m") {
 			loadModel = true;
 		} else if (arg == "-a") {
 			loadModel = false;
@@ -36,7 +36,7 @@ Scene_ CreateScene(const int argc, const char** argv) {
 			} else {
 				scene->mEntities.back()->mModel->LoadAnimation(arg, true);
 			}
-		}
+		}*/
 	}
 	scene->Init();
 	return scene;
