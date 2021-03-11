@@ -19,7 +19,7 @@ struct Model {
 	std::vector<ModelMesh_> mMeshes;
 	AnimationSet_ mAnimationSet;
 	AABB mAABB;
-	void Load(const std::string& fileName) { Load(fileName, {}); }
+	void Load(const std::string& fileName);
 	void Load(const std::string& fileName, const rapidjson::Value& options);
 	/*void LoadAnimation(const std::string& fileName, bool append = false) {
 		LoadAnimation(fileName, {}, append);

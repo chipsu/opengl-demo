@@ -36,15 +36,22 @@ struct AssetMgr {
 		if (mUseCache && std::filesystem::exists(key)) {
 			asset->Import(key);
 		} else {
-			auto pos = name.find_first_of("?");
-			if (pos != -1) {
-				auto fileName = name.substr(0, pos);
-				auto opts = name.substr(pos + 1);
+			if (name.find(".json") != -1) {
 				rapidjson::Document options;
-				options.Parse(opts.c_str());
-				asset->Load(fileName, options.GetObject());
+				LoadJson(options, name);
+				assert(options.HasMember("source"));
+				asset->Load(options["source"].GetString(), options);
 			} else {
-				asset->Load(name, mDefaultOptions);
+				auto pos = name.find_first_of("?");
+				if (pos != -1) {
+					auto fileName = name.substr(0, pos);
+					auto opts = name.substr(pos + 1);
+					rapidjson::Document options;
+					options.Parse(opts.c_str());
+					asset->Load(fileName, options.GetObject());
+				} else {
+					asset->Load(name, mDefaultOptions);
+				}
 			}
 			if (mUseCache) {
 				asset->Export(key);
@@ -65,8 +72,8 @@ struct AssetMgr {
 	}
 
 	T_ Load(const std::string& name, const rapidjson::Value& options, const std::string& optionsKey) {
-		if (cfg.HasMember(optionsKey)) {
-			return Load(name, cfg[optionsKey]);
+		if (options.HasMember(optionsKey.c_str())) {
+			return Load(name, options[optionsKey.c_str()]);
 		}
 		return Load(name);
 	}

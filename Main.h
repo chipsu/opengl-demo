@@ -37,6 +37,12 @@
 #include <rapidjson/ostreamwrapper.h>
 #include <rapidjson/writer.h>
 
+inline void LoadJson(rapidjson::Document &doc, const std::string& fileName) {
+	std::ifstream ifs(fileName);
+	rapidjson::IStreamWrapper isw(ifs);
+	doc.ParseStream<rapidjson::kParseDefaultFlags | rapidjson::kParseCommentsFlag | rapidjson::kParseTrailingCommasFlag>(isw);
+}
+
 inline float GetTime() {
 	return (float)glfwGetTime();
 }

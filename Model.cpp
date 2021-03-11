@@ -229,6 +229,10 @@ const aiScene* LoadScene(const std::string& fileName, const rapidjson::Value& op
     return scene;
 }
 
+void Model::Load(const std::string& fileName) {
+    Load(fileName, {});
+}
+
 void Model::Load(const std::string& fileName, const rapidjson::Value& options) {
     const auto scene = LoadScene(fileName, options);
     mName = fileName;
@@ -253,4 +257,18 @@ void Model::Import(const std::string& fileName) {
 
 void Model::Export(const std::string& fileName) {
     std::cerr << "Model::Export" << std::endl;
+
+    auto fp = fopen((fileName + ".test").c_str(), "wb");
+    uint32_t meshCount = mMeshes.size();
+    fwrite(&meshCount, sizeof(meshCount), 1, fp);
+    for (auto& mesh : mMeshes) {
+        fwrite(&mesh->mTransform[0], sizeof(glm::mat4), 1, fp);
+        uint32_t ic = mesh->mMesh->mIndices.size();
+        fwrite(&ic, sizeof(ic), 1, fp);
+        fwrite(mesh->mMesh->mIndices.data(), sizeof(uint32_t) * ic, 1, fp);
+        uint32_t vc = mesh->mMesh->mVertices.size();
+        fwrite(&vc, sizeof(vc), 1, fp);
+        fwrite(mesh->mMesh->mVertices.data(), sizeof(Vertex) * vc, 1, fp);
+    }
+    fclose(fp);
 }

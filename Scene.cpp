@@ -97,14 +97,7 @@ void ModelEntity::Load(Scene& scene, const rapidjson::Value& cfg) {
 	mShaderProgram = ShaderProgram::Load("default");
 	if (nullptr == gModelMgr) gModelMgr = new AssetMgr<Model>();
 	std::string name = cfg["model"].GetString();
-	mModel = gModelMgr->Load(name, cfg, "modelOptions");
-	/*
-*	// TODO: mModel->AddAnimations...
-	if (cfg.HasMember("animations")) {
-		for (const auto& anim : cfg["animations"].GetArray()) {
-			mModel->LoadAnimation(anim.GetString(), modelOptions, true);
-		}
-	}*/
+	mModel = gModelMgr->Load(name);
 }
 
 void ParticleEntity::Init(Scene& scene) {
@@ -180,9 +173,7 @@ Scene::Scene() {
 
 void Scene::Load(const std::string& fileName) {
 	rapidjson::Document config;
-	std::ifstream ifs(fileName);
-	rapidjson::IStreamWrapper isw(ifs);
-	config.ParseStream<kParseDefaultFlags | kParseCommentsFlag | kParseTrailingCommasFlag>(isw);
+	LoadJson(config, fileName);
 
 	for (const auto& cfg : config["entities"].GetArray()) {
 		if (cfg.HasMember("disabled") && cfg["disabled"].GetBool()) continue;
